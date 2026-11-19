@@ -25,10 +25,11 @@
     if (!store.loaded) store.seedDemo();
   }
 
-  const VIEWS = ["search", "report", "found", "activity", "desk", "intake", "cleanup", "audit"];
+  const VIEWS = ["search", "report", "found", "activity", "desk", "intake", "cleanup", "audit", "lab"];
   const ui = {
     view: "search", token: null, modal: null, loginTab: "student",
-    q: "", cat: "", gate: "", since: "", sort: "relevance", suggest: [], sugIdx: -1,
+    q: "", cat: "", gate: "", since: "", sort: "relevance", algo: "binary", suggest: [], sugIdx: -1,
+    lab: { structures: null, loading: false, trace: null, bench: null, busy: "", err: "", n: 32, target: 22, sizes: "1000,10000,100000" },
     authMode: "signin", busy: false, loadError: null,
     photo: null, reportResult: null, foundResult: null, deskGate: "", auditItem: "", auditAction: "", confirmReset: false,
   };
@@ -117,6 +118,7 @@
       items.push(["report", "Report missing"], ["found", "I found something"]);
       if (s) { items.push(["activity", "My activity"]); badges = { activity: store.unseenAlerts(ui.token) }; }
     }
+    items.push(["lab", "DSA Lab"]);
     const nav = items.map(([v, l]) => `<button class="navbtn" data-act="go" data-v="${v}"${ui.view === v ? ' aria-current="page"' : ""}>${l}${badges[v] ? `<span class="count">${badges[v]}</span>` : ""}</button>`).join("");
     const who = s
       ? `<span><b>${esc(s.name)}</b> <span class="muted">${s.role === "staff" ? "Security staff" : "Student / employee"}</span></span><button class="btn small" data-act="signout">Sign out</button>`
@@ -132,6 +134,49 @@
     const hrs = Number(ui.since);
     return store.search({ q: ui.q, category: ui.cat, gate: ui.gate, from: hrs ? store.now() - hrs * HOUR : null, sort: ui.sort });
   }
+
+  /* ---------- Python DSA engine bridge ----------
+     With Supabase on, every search and autocomplete is answered by the Python server (backend/server.py), which runs
+     the searching algorithms in backend/findr_dsa. If the server is not reachable the page falls back to the local
+     JavaScript search, so the site never breaks. */
+  const PY = { ok: false, base: (CFG && CFG.api) || "", requested: null, last: null };
+  const jsId = (n) => "I-" + String(n).padStart(4, "0");
+  async function pyGet(path) {
+    const r = await fetch(PY.base + path);
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Python server error");
+    return j;
+  }
+  function pyProbe() {
+    if (typeof fetch !== "function") return;
+    pyGet("/api/health").then((h) => { PY.ok = !!h.ok; if (ui.view === "search" || ui.view === "lab") render(); else renderHeader(); }, () => { PY.ok = false; });
+  }
+  const searchKey = () => JSON.stringify([ui.q.trim(), ui.cat, ui.gate, ui.since, ui.sort, ui.algo]);
+  function engineSearch() {
+    const local = runSearch();
+    if (!(REMOTE && PY.ok)) return local;
+    const key = searchKey();
+    if (PY.last && PY.last.key === key) {
+      const d = PY.last.data;
+      const results = d.ids.map((id) => { const it = store.getItem(jsId(id), false); return it ? { item: it, score: d.scores[id] } : null; }).filter(Boolean);
+      return { results, didYouMean: d.did_you_mean, total: results.length, metrics: d.metrics };
+    }
+    if (PY.requested !== key) {
+      PY.requested = key;
+      const hrs = Number(ui.since);
+      const qs = new URLSearchParams({ q: ui.q, category: ui.cat, gate: ui.gate, sort: ui.sort, algo: ui.algo });
+      if (hrs) qs.set("from", String(store.now() - hrs * HOUR));
+      pyGet("/api/search?" + qs).then((data) => { PY.last = { key, data }; if (ui.view === "search" && searchKey() === key) refreshSearch(); }, () => {});
+    }
+    return local;
+  }
+  function engineBadge(r) {
+    if (r.metrics) {
+      const m = r.metrics;
+      return `<p class="engine mono" title="Answered by the Python server using the DSA in backend/findr_dsa">Python engine · ${esc(m.algorithm)} search · ${m.window_comparisons} window comparisons · ${m.ms} ms · ${m.indexed} items indexed · <button class="btn ghost small" data-act="go" data-v="lab">see how</button></p>`;
+    }
+    return `<p class="engine muted">${REMOTE ? "Python engine offline: showing JavaScript fallback results. Start it with <span class=\"mono\">python backend/server.py</span>." : "Browser demo: searched in JavaScript."}</p>`;
+  }
   function chipsHTML() {
     const cats = store.categories.values().filter((c) => c.count > 0 || c.id === ui.cat);
     const total = store.categories.values().reduce((n, c) => n + c.count, 0);
@@ -139,8 +184,8 @@
     return mk("", "All", total) + CATEGORIES.map(([id]) => cats.find((c) => c.id === id)).filter(Boolean).map((c) => mk(c.id, c.label, c.count)).join("");
   }
   function resultsHTML() {
-    const r = runSearch();
-    let head = `<p class="muted" aria-live="polite">${r.total} item${r.total === 1 ? "" : "s"} held by security${ui.q.trim() ? ` for “${esc(ui.q.trim())}”` : ""}</p>`;
+    const r = engineSearch();
+    let head = `<p class="muted" aria-live="polite">${r.total} item${r.total === 1 ? "" : "s"} held by security${ui.q.trim() ? ` for “${esc(ui.q.trim())}”` : ""}</p>${engineBadge(r)}`;
     if (r.didYouMean) head += `<p>No exact match. Showing results for <button class="btn ghost small" data-act="pickAgain" data-v="${esc(r.didYouMean)}">${esc(r.didYouMean)}</button></p>`;
     if (!r.total) {
       return head + `<div class="panel empty"><h3>Nothing matches yet</h3>
@@ -168,6 +213,7 @@
           <div class="field"><label for="f-gate">Location</label><select id="f-gate" data-set="gate">${options(GATES, ui.gate, "Any gate")}</select></div>
           <div class="field"><label for="f-since">Found</label><select id="f-since" data-set="since">${options(since, ui.since, "Any time")}</select></div>
           <div class="field"><label for="f-sort">Sort by</label><select id="f-sort" data-set="sort">${options([["relevance", "Best match"], ["newest", "Newest first"], ["oldest", "Oldest first"]], ui.sort)}</select></div>
+          ${REMOTE && PY.ok ? `<div class="field"><label for="f-algo">Date filter algorithm</label><select id="f-algo" data-set="algo">${options([["binary", "Binary search"], ["linear", "Linear search"]], ui.algo)}</select></div>` : ""}
         </div>
       </section>
       <section class="sect" id="results">${resultsHTML()}</section>`;
@@ -183,6 +229,83 @@
     const raw = ui.q;
     ui.suggest = raw.trim() ? store.suggest(raw).filter((s) => s !== raw.trim().toLowerCase()) : [];
     ui.sugIdx = -1;
+    if (REMOTE && PY.ok && raw.trim()) {
+      pyGet("/api/suggest?q=" + encodeURIComponent(raw)).then((d) => {
+        if (ui.q !== raw) return; // the user kept typing; this answer is stale
+        ui.suggest = d.suggestions.filter((s) => s !== raw.trim().toLowerCase());
+        ui.sugIdx = -1;
+        refreshSearch();
+      }, () => {});
+    }
+  }
+
+  /* ---------- DSA Lab (Python engine on display) ---------- */
+  function labLoad() {
+    const L = ui.lab;
+    if (L.structures || L.loading) return;
+    L.loading = true;
+    pyGet("/api/lab/structures").then((s) => { L.structures = s; L.loading = false; if (ui.view === "lab") render(); }, (e) => { L.loading = false; L.err = e.message; });
+  }
+  const cellClass = (L, name, i) => {
+    const res = L.trace.results[name];
+    if (res.found && res.index === i) return "lab-cell hit found";
+    return res.steps.some((s) => s.index === i || s.mid === i || s.jump_to === i) ? "lab-cell hit" : "lab-cell";
+  };
+  function traceHTML(L) {
+    const t = L.trace;
+    if (!t) return `<p class="muted">Pick a list size and a number to look for, then run. Every algorithm gets the same sorted list.</p>`;
+    const cols = ["linear", "binary", "jump"].map((name) => {
+      const r = t.results[name];
+      const cells = t.array.map((v, i) => `<span class="${cellClass(L, name, i)}" title="index ${i}: ${v}">${t.array.length <= 64 ? v : ""}</span>`).join("");
+      return `<div class="panel stack labcol"><h3>${name[0].toUpperCase() + name.slice(1)} search</h3>
+        <p class="mono"><b>${r.comparisons}</b> comparisons · ${r.found ? `found at index ${r.index}` : "not in the list"}</p>
+        <div class="lab-cells" aria-label="${name} search visited cells">${cells}</div>
+        <p class="muted small">${r.steps.length >= 64 ? "First 64 steps shown. " : ""}Highlighted cells are the ones this algorithm had to look at.</p></div>`;
+    }).join("");
+    return `<div class="labgrid">${cols}</div>`;
+  }
+  function benchHTML(L) {
+    const b = L.bench;
+    if (!b) return `<p class="muted">Runs all three algorithms on lists of growing size and reports exact comparison counts plus measured time.</p>`;
+    const max = Math.max(...b.rows.map((r) => Math.max(r.linear.comparisons, r.binary.comparisons, r.jump.comparisons)));
+    const bar = (v, cls) => `<span class="bar ${cls}" style="width:${Math.max(2, (Math.log10(v + 1) / Math.log10(max + 1)) * 100).toFixed(1)}%"><i>${v}</i></span>`;
+    const avg = b.rows.filter((r) => r.case === "average");
+    return `<div class="panel tight"><div class="tablewrap"><table><thead><tr><th class="num">n</th><th>Case</th><th class="num">Linear comps</th><th class="num">Binary comps</th><th class="num">Jump comps</th><th class="num">Linear time</th><th class="num">Binary time</th><th class="num">Jump time</th></tr></thead><tbody>
+      ${b.rows.map((r) => `<tr><td class="num">${r.n.toLocaleString()}</td><td>${r.case}</td><td class="num">${r.linear.comparisons}</td><td class="num">${r.binary.comparisons}</td><td class="num">${r.jump.comparisons}</td><td class="num">${r.linear.us}</td><td class="num">${r.binary.us}</td><td class="num">${r.jump.us}</td></tr>`).join("")}
+      </tbody></table></div></div>
+      <div class="panel stack"><h3>Average case: comparisons per search <span class="muted">(log scale)</span></h3>
+        ${avg.map((r) => `<div class="barrow"><span class="mono barlbl">n = ${r.n.toLocaleString()}</span><div class="bars">${bar(r.linear.comparisons, "b-lin")}${bar(r.jump.comparisons, "b-jmp")}${bar(r.binary.comparisons, "b-bin")}</div></div>`).join("")}
+        <p class="muted small"><span class="key b-lin"></span>Linear <span class="key b-jmp"></span>Jump <span class="key b-bin"></span>Binary. Comparisons are exact and machine independent. The time columns in the table are average microseconds per search and vary by computer.</p></div>`;
+  }
+  function labView() {
+    const head = `<section class="head"><h1>DSA Lab</h1><p class="muted">FINDr's search runs on Python data structures and algorithms. Try them here, on the same engine that answers the Search page.</p></section>`;
+    if (!PY.ok) {
+      return head + `<div class="panel stack"><h3>Python engine not connected</h3><p class="muted">The lab talks to the Python server. Start it from the project folder, then reload this page:</p>
+        <p class="mono">python backend/server.py --demo</p><div class="actions"><button class="btn primary" data-act="labRetry">Check again</button></div></div>`;
+    }
+    labLoad();
+    const L = ui.lab;
+    const table = L.structures ? `<div class="panel tight"><div class="tablewrap"><table><thead><tr><th>Name</th><th>Type</th><th>What it does in FINDr</th><th>Time</th><th>Space</th></tr></thead><tbody>
+      ${L.structures.map((s) => `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.kind)}</td><td>${esc(s.where)}</td><td class="mono">${esc(s.time)}</td><td class="mono">${esc(s.space)}</td></tr>`).join("")}</tbody></table></div></div>` : `<p class="muted">${esc(L.err) || "Loading…"}</p>`;
+    return head + `
+      <section class="sect"><header><h2>1. Watch the searches</h2></header>
+        <form class="filters" data-form="labTrace">
+          <div class="field"><label for="lab-n">List size (1 to 200)</label><input id="lab-n" name="n" type="number" min="1" max="200" value="${esc(L.n)}"></div>
+          <div class="field"><label for="lab-t">Number to find (list holds even numbers 0, 2, 4…)</label><input id="lab-t" name="target" type="number" value="${esc(L.target)}"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn primary" type="submit"${L.busy === "trace" ? " disabled" : ""}>Run all three</button></div>
+        </form>
+        <div class="formerr" role="alert"${L.err && L.busy === "" ? "" : " hidden"}>${esc(L.err)}</div>
+        ${traceHTML(L)}</section>
+      <section class="sect"><header><h2>2. Compare their speed</h2></header>
+        <form class="filters" data-form="labBench">
+          <div class="field"><label for="lab-s">List sizes (comma separated, up to 200000)</label><input id="lab-s" name="sizes" type="text" value="${esc(L.sizes)}"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn primary" type="submit"${L.busy === "bench" ? " disabled" : ""}>${L.busy === "bench" ? "Running…" : "Run benchmark"}</button></div>
+        </form>
+        ${benchHTML(L)}
+        <div class="panel stack"><h3>Which one does FINDr use?</h3>
+          <p>Binary search. The item list is kept sorted (merge sort, O(n log n) each time the list loads), so every lookup afterwards costs O(log n) instead of O(n).</p>
+          <p class="muted">Limits: binary and jump search need sorted data. Linear search wins when the target is the very first element, and for very small lists the difference is not worth the sorting step. A hash table would find an exact id in O(1), but it cannot answer “everything found between Monday and Wednesday”; sorted arrays can.</p></div></section>
+      <section class="sect"><header><h2>3. Everything in the engine</h2></header>${table}</section>`;
   }
 
   /* ---------- report missing ---------- */
@@ -394,7 +517,7 @@
   /* ---------- render ---------- */
   const views = {
     search: searchView, report: reportView, found: () => foundView(isStaff()), intake: () => (isStaff() ? foundView(true) : `<section class="head"><h1>Log an item</h1></section>${gateCard("Staff sign-in required", true)}`),
-    activity: activityView, desk: deskView, cleanup: cleanupView, audit: auditView,
+    activity: activityView, desk: deskView, cleanup: cleanupView, audit: auditView, lab: labView,
   };
   function render() {
     const app = $("#app");
@@ -428,6 +551,7 @@
   /* ---------- actions (click) ---------- */
   const actions = {
     go: (el) => go(el.dataset.v),
+    labRetry: () => pyProbe(),
     signin: (el) => { ui.loginTab = el.dataset.v === "staff" ? "staff" : "student"; ui.authMode = "signin"; ui.modal = { type: "signin" }; render(); },
     tab: (el) => { if (REMOTE) ui.authMode = el.dataset.v === "signup" ? "signup" : "signin"; else ui.loginTab = el.dataset.v; ui.modal = { type: "signin", note: ui.modal && ui.modal.note }; render(); },
     signout: guard(async () => { await store.logout(ui.token); ui.token = null; lsSet("findr.session", null); ui.reportResult = null; ui.foundResult = null; go(["search", "report", "found"].includes(ui.view) ? ui.view : "search"); toast("Signed out."); }),
@@ -475,6 +599,20 @@
   /* ---------- forms (submit) ---------- */
   const readForm = (f) => f.__values || Object.fromEntries(new FormData(f));
   const forms = {
+    async labTrace(f) {
+      const v = readForm(f), L = ui.lab;
+      L.n = v.n; L.target = v.target; L.err = ""; L.busy = "trace"; render();
+      try { L.trace = await pyGet(`/api/lab/trace?n=${encodeURIComponent(v.n)}&target=${encodeURIComponent(v.target)}`); }
+      catch (e) { L.err = e.message; }
+      L.busy = ""; render();
+    },
+    async labBench(f) {
+      const v = readForm(f), L = ui.lab;
+      L.sizes = v.sizes; L.err = ""; L.busy = "bench"; render();
+      try { L.bench = await pyGet("/api/lab/benchmark?sizes=" + encodeURIComponent(v.sizes)); }
+      catch (e) { L.err = e.message; }
+      L.busy = ""; render();
+    },
     async signin(f) {
       const v = readForm(f);
       if (REMOTE) {
@@ -603,6 +741,7 @@
     const start = (typeof location !== "undefined" ? (location.hash || "").replace("#", "") : "");
     if (VIEWS.includes(start)) ui.view = start;
     wire();
+    pyProbe();
     if (REMOTE) {
       const app = $("#app");
       if (app) app.innerHTML = `<main class="wrap"><section class="head"><h1>FINDr</h1><p class="muted">Connecting…</p></section></main>`;

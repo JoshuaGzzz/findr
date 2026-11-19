@@ -204,3 +204,23 @@ footer.foot { margin-top: 40px; padding-top: 14px; border-top: 3px solid var(--i
 .hood dt { font: 700 0.74rem var(--font-data); text-transform: uppercase; letter-spacing: 0.06em; }
 .hood dd { margin: 3px 0 0; color: var(--ink-2); font-size: 0.88rem; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* DSA Lab and engine badge */
+.engine { margin: 0; font-size: 0.82rem; color: var(--ink-2); }
+.engine .btn.ghost { padding-block: 0; }
+.labgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.labcol h3 { margin: 0; }
+.lab-cells { display: flex; flex-wrap: wrap; gap: 3px; }
+.lab-cell { min-width: 14px; height: 22px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center; font: 600 0.62rem var(--font-data); border: 1px solid var(--line-strong); border-radius: 3px; background: var(--surface); color: var(--ink-2); }
+.lab-cell.hit { background: var(--surface-2); border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink-2); }
+.lab-cell.found { background: var(--brand); border-color: var(--ink); color: var(--brand-ink); box-shadow: none; }
+.small { font-size: 0.82rem; }
+.barrow { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
+.bars { display: flex; flex-direction: column; gap: 3px; }
+.bar { display: block; height: 16px; border-radius: 3px; border: 1.5px solid var(--ink); position: relative; min-width: 6px; }
+.bar i { position: absolute; left: calc(100% + 6px); top: -1px; font: 600 0.72rem var(--font-data); font-style: normal; color: var(--ink-2); white-space: nowrap; }
+.b-lin { background: var(--bad); }
+.b-jmp { background: var(--ink-2); }
+.b-bin { background: var(--brand); }
+.key { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 10px; border: 1.5px solid var(--ink); border-radius: 2px; vertical-align: -1px; }
+.key:first-child { margin-left: 0; }
