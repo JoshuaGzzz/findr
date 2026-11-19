@@ -73,7 +73,7 @@
 
   /* ---------- shared pieces ---------- */
   function tile(it) {
-    if (it.photo) return `<img src="${esc(it.photo)}" alt="Photo of ${esc(it.title)}">`;
+    if (it.photo) return `<button type="button" class="zoom" data-act="zoomPhoto" data-id="${esc(it.id)}" aria-label="Enlarge photo of ${esc(it.title)}"><img src="${esc(it.photo)}" alt="Photo of ${esc(it.title)}"></button>`;
     const initial = esc((it.categoryLabel || "?")[0]);
     return `<span class="tile" style="--h:${hueOf(it.category)}" aria-hidden="true">${initial}</span>`;
   }
@@ -374,6 +374,11 @@
     } else if (m.type === "claimDone") {
       inner = `<header><h2>Claim sent</h2>${close}</header><p>Security will review it. Bring a valid ID to the <b>${esc(m.gate)}</b> to collect <b>${esc(m.title)}</b>. You can follow the status under My activity.</p>
         <div class="actions"><button class="btn primary" data-act="closeModal">Done</button></div>`;
+    } else if (m.type === "photo") {
+      const it = store.getItem(m.id, isStaff());
+      wide = " photo";
+      inner = `<header><div><h2>${esc(it.title)}</h2><p class="muted">${esc(it.id)} · ${esc(it.gateName)}</p></div>${close}</header>
+        <img src="${esc(it.photo)}" alt="Full size photo of ${esc(it.title)}">`;
     } else if (m.type === "compare") {
       const list = store.lookalikes(m.id);
       wide = " wide";
@@ -432,6 +437,7 @@
       if (!me()) { ui.loginTab = "student"; ui.authMode = "signin"; ui.modal = { type: "signin", note: "Sign in to claim this item." }; return render(); }
       ui.modal = { type: "claim", id: el.dataset.id }; render();
     },
+    zoomPhoto: (el) => { ui.modal = { type: "photo", id: el.dataset.id }; render(); },
     compare: (el) => { ui.modal = { type: "compare", id: el.dataset.id }; render(); },
     share: (el) => {
       const it = store.getItem(el.dataset.id);
@@ -537,11 +543,11 @@
       fr.onload = () => {
         const img = new Image();
         img.onload = () => {
-          const s = Math.min(1, 560 / Math.max(img.width, img.height));
+          const s = Math.min(1, (REMOTE ? 1280 : 560) / Math.max(img.width, img.height));
           const c = document.createElement("canvas");
           c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
           c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-          resolve(c.toDataURL("image/jpeg", 0.7));
+          resolve(c.toDataURL("image/jpeg", REMOTE ? 0.82 : 0.7));
         };
         img.onerror = reject; img.src = fr.result;
       };
