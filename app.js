@@ -122,7 +122,7 @@
       ? `<span><b>${esc(s.name)}</b> <span class="muted">${s.role === "staff" ? "Security staff" : "Student / employee"}</span></span><button class="btn small" data-act="signout">Sign out</button>`
       : `<button class="btn primary small" data-act="signin" data-v="student">Sign in</button>`;
     return `<div class="bar-in">
-      <button class="brand" data-act="go" data-v="search" aria-label="FINDr home"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 12 12 3h8a1 1 0 0 1 1 1v8l-9 9a1.5 1.5 0 0 1-2 0L3 14a1.5 1.5 0 0 1 0-2Z" fill="currentColor"/><circle cx="16.5" cy="7.5" r="1.8" fill="var(--bg)"/></svg><span class="wm">FIND<b>r</b></span></button>
+      <button class="brand" data-act="go" data-v="search" aria-label="FINDr home"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 12 12 3h8a1 1 0 0 1 1 1v8l-9 9a1.5 1.5 0 0 1-2 0L3 14a1.5 1.5 0 0 1 0-2Z" fill="currentColor"/><circle cx="16.5" cy="7.5" r="2" fill="var(--bg)"/></svg><span class="wm">FIND<b>r</b></span></button>
       <nav class="main" aria-label="Main">${nav}</nav><div class="who">${who}</div></div>`;
   }
   function renderHeader() { const h = $("#hdr"); if (h) h.innerHTML = headerHTML(); }
@@ -155,8 +155,8 @@
   }
   function searchView() {
     const since = [["24", "Last 24 hours"], ["72", "Last 3 days"], ["168", "Last 7 days"], ["720", "Last 30 days"]];
-    return `<section class="head"><h1>Find your lost item</h1>
-      <p class="muted">Every item below is physically with campus security. Type a word such as “umbrella”, “payong” or “wallet”.</p></section>
+    return `<section class="head"><h1>Lost something on campus?</h1>
+      <p class="muted">Everything listed here is physically at a security desk. Search by what it is: “umbrella”, “payong”, “wallet”.</p></section>
       <section class="sect">
         <div class="searchbox">
           <label class="sr-only" for="q">Search lost items</label>

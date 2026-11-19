@@ -7,7 +7,7 @@ const css = read("style.css");
 const js = [read("dsa.js"), read("store.js"), read("supabase.js"), read("app.js")].join("\n;\n");
 if (js.includes("</script")) throw new Error("bundle contains </script");
 const fonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap">';
+  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..900&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap">';
 const body = `<div id="app"></div><div id="toast" role="status" aria-live="polite"></div>\n<script>${js}</script>`;
 
 // Optional Supabase mode: SUPABASE_URL + SUPABASE_KEY (publishable key) in the environment produce dist/index.html.
