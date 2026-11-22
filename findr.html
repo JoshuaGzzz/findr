@@ -1,0 +1,2334 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>FINDr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..900&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap">
+<style>/* FINDr: a lost-and-found desk. Manila paper, ink, locker green, stamp red.
+   Items are claim tags (punched hole, perforation); statuses are rubber stamps; headings are locker-label caps.
+   One centered column (max 1080). Operate mode: scannable, consistent, brand lives in the details. */
+:root {
+  --bg: #f1ecdf; --surface: #fffcf4; --surface-2: #e9e2d0;
+  --ink: #1b1a14; --ink-2: #57513f; --line: #d6ccb6; --line-strong: #a89b7c;
+  --brand: #1d5843; --brand-ink: #fffcf4; --brand-soft: #d9e8dc;
+  --stamp: #c1401c;
+  --tag: #efc14a; --tag-ink: #2c2100;
+  --ok: #1d6a47; --ok-soft: #d9ead8; --warn: #77510a; --warn-soft: #f4e2ae; --bad: #a92d20; --bad-soft: #f4d9d0;
+  --tile-s: 38%; --tile-l: 84%; --tile-fg: 24%;
+  --shadow: 0 2px 0 rgba(27, 26, 20, 0.9);
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15130e; --surface: #1f1c14; --surface-2: #2a261b;
+    --ink: #f1ebdb; --ink-2: #b3a98f; --line: #38331f; --line-strong: #5a513a;
+    --brand: #74c6a1; --brand-ink: #0b2a1e; --brand-soft: #1b3a2c;
+    --stamp: #ff7a52;
+    --tag: #e7ba3c; --tag-ink: #2a2000;
+    --ok: #80d3a7; --ok-soft: #173627; --warn: #ecc767; --warn-soft: #3a2f10; --bad: #ff8e80; --bad-soft: #3e1f1a;
+    --tile-s: 24%; --tile-l: 24%; --tile-fg: 80%;
+    --shadow: 0 2px 0 rgba(0, 0, 0, 0.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15130e; --surface: #1f1c14; --surface-2: #2a261b;
+  --ink: #f1ebdb; --ink-2: #b3a98f; --line: #38331f; --line-strong: #5a513a;
+  --brand: #74c6a1; --brand-ink: #0b2a1e; --brand-soft: #1b3a2c;
+  --stamp: #ff7a52;
+  --tag: #e7ba3c; --tag-ink: #2a2000;
+  --ok: #80d3a7; --ok-soft: #173627; --warn: #ecc767; --warn-soft: #3a2f10; --bad: #ff8e80; --bad-soft: #3e1f1a;
+  --tile-s: 24%; --tile-l: 24%; --tile-fg: 80%;
+  --shadow: 0 2px 0 rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+h1, h2, h3 { font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; margin: 0; text-wrap: balance; text-transform: uppercase; letter-spacing: 0.005em; font-weight: 800; }
+h1 { font-size: clamp(2.2rem, 7vw, 3.6rem); }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.1rem; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--brand); }
+.wrap, .bar-in { max-width: 1080px; margin: 0 auto; }
+.muted { color: var(--ink-2); }
+.mono { font-family: var(--font-data); font-size: 0.86em; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; border-radius: 3px; }
+
+/* masthead */
+#hdr { padding-top: 16px; }
+.bar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; padding-bottom: 0; border-bottom: 3px solid var(--ink); }
+.brand { display: flex; align-items: center; gap: 9px; font: 900 1.9rem/1 var(--font-display); font-stretch: 78%; letter-spacing: 0.01em; color: var(--ink); text-decoration: none; background: none; border: 0; padding: 4px 0 10px; cursor: pointer; }
+.brand svg { color: var(--ink); }
+.brand .wm b { color: var(--stamp); font: inherit; }
+nav.main { display: flex; gap: 2px; overflow-x: auto; flex: 1 1 320px; min-width: 0; scrollbar-width: none; align-self: flex-end; }
+nav.main::-webkit-scrollbar { display: none; }
+.navbtn { background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -3px; padding: 11px 13px 10px; cursor: pointer; white-space: nowrap; color: var(--ink-2); font-weight: 650; display: inline-flex; gap: 7px; align-items: center; }
+.navbtn:hover { color: var(--ink); background: var(--surface-2); }
+.navbtn[aria-current="page"] { color: var(--ink); border-bottom-color: var(--stamp); }
+.count { background: var(--stamp); color: #fff; border-radius: 3px; font: 700 0.72rem var(--font-data); padding: 1px 6px; min-width: 20px; text-align: center; }
+.who { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; padding-bottom: 8px; }
+.who b { font-weight: 700; }
+
+/* buttons + fields */
+.btn { background: var(--surface); border: 1.5px solid var(--ink); border-radius: var(--radius); padding: 9px 15px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: var(--shadow); transition: transform 0.08s, box-shadow 0.08s; }
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--ink); }
+.btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--ink); }
+.btn.primary:hover { filter: brightness(1.1); background: var(--brand); }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: transparent; box-shadow: 0 2px 0 var(--bad); }
+.btn.small { padding: 4px 10px; font-size: 0.85rem; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--brand); padding-inline: 6px; box-shadow: none; text-decoration: underline; text-underline-offset: 3px; }
+.btn.ghost:hover { background: transparent; text-decoration-thickness: 2px; }
+.btn.ghost:active { transform: none; }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field > label, .lbl { font: 700 0.78rem var(--font-data); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+.help { font-size: 0.83rem; color: var(--ink-2); }
+input[type="text"], input[type="search"], input[type="password"], input[type="email"], input[type="datetime-local"], select, textarea {
+  background: var(--surface); border: 1.5px solid var(--line-strong); border-radius: var(--radius); padding: 10px 12px; width: 100%; min-width: 0;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: 3px solid color-mix(in srgb, var(--stamp) 35%, transparent); outline-offset: 0; }
+textarea { min-height: 80px; resize: vertical; }
+input[type="range"] { width: 100%; accent-color: var(--brand); }
+.formerr { background: var(--bad-soft); color: var(--bad); border-left: 4px solid var(--bad); border-radius: 3px; padding: 9px 12px; font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 640px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+form.stack, .stack { display: flex; flex-direction: column; gap: 14px; }
+
+/* page structure */
+main { padding-top: 30px; display: flex; flex-direction: column; gap: 26px; }
+.head { display: flex; flex-direction: column; gap: 10px; max-width: 60ch; }
+.head > .muted { font-size: 1.05rem; }
+.panel { background: var(--surface); border: 1.5px solid var(--ink); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.panel.tight { padding: 0; overflow: hidden; }
+.sect { display: flex; flex-direction: column; gap: 12px; }
+.sect > header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 14px; border-bottom: 1.5px solid var(--line-strong); padding-bottom: 6px; }
+
+/* search */
+.searchbox { position: relative; max-width: 680px; }
+.searchbox input { padding: 16px 18px; font-size: 1.2rem; border-radius: var(--radius); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+.suggest { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 8px); margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 2px solid var(--ink); border-radius: var(--radius); box-shadow: 4px 4px 0 var(--ink); }
+.suggest li { padding: 9px 12px; border-radius: 3px; cursor: pointer; }
+.suggest li[aria-selected="true"], .suggest li:hover { background: var(--tag); color: var(--tag-ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: transparent; border: 1.5px solid var(--line-strong); border-radius: 3px; padding: 4px 11px; cursor: pointer; font-size: 0.88rem; font-weight: 650; }
+.chip:hover { border-color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip .muted { font-family: var(--font-data); font-size: 0.8em; }
+.chip[aria-pressed="true"] .muted { color: inherit; opacity: 0.75; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; }
+.filters .field { flex: 1 1 160px; max-width: 240px; }
+.results { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 18px; }
+
+/* claim tag */
+.ticket { position: relative; display: grid; grid-template-columns: var(--stub, 124px) minmax(0, 1fr); background: var(--surface); border: 1.5px solid var(--ink); border-radius: 4px 14px 14px 4px; box-shadow: 4px 4px 0 var(--ink); }
+.stub { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 8px 14px; border-right: 2px dashed var(--line-strong); background: var(--surface-2); border-radius: 3px 0 0 3px; }
+.stub::before { content: ""; position: absolute; top: 9px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--ink); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35); }
+.tid { font: 700 0.74rem var(--font-data); color: var(--ink); letter-spacing: 0.04em; }
+.tile { width: 64px; height: 64px; border-radius: 3px; display: grid; place-items: center; font: 900 1.9rem var(--font-display); font-stretch: 78%; background: hsl(var(--h) var(--tile-s) var(--tile-l)); color: hsl(var(--h) 55% var(--tile-fg)); border: 1.5px solid var(--ink); }
+.stub img { width: 104px; height: 104px; object-fit: cover; border-radius: 3px; border: 1.5px solid var(--ink); display: block; }
+.zoom { padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: 3px; position: relative; }
+.zoom::after { content: "⤢"; position: absolute; right: 4px; bottom: 4px; width: 22px; height: 22px; border-radius: 3px; display: grid; place-items: center; font-size: 14px; color: #fff; background: rgba(0, 0, 0, 0.65); }
+.modal.photo { width: min(920px, 100%); align-items: stretch; }
+.modal.photo img { width: 100%; max-height: 78vh; object-fit: contain; border-radius: 3px; background: #000; }
+@media (max-width: 520px) { .ticket { --stub: 100px; } .stub img { width: 82px; height: 82px; } .tile { width: 52px; height: 52px; } }
+.tbody { padding: 16px 16px 14px 18px; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.rowtop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.facts { margin: 0; display: grid; gap: 3px; font-size: 0.9rem; }
+.facts div { display: flex; gap: 8px; }
+.facts dt { font: 700 0.7rem var(--font-data); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); width: 48px; flex: none; padding-top: 3px; }
+.facts dd { margin: 0; min-width: 0; }
+.loc { background: var(--tag); color: var(--tag-ink); border-radius: 2px; padding: 1px 7px; font-weight: 700; font-size: 0.85rem; }
+.desc { font-size: 0.92rem; color: var(--ink-2); }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { border: 1px solid var(--line-strong); border-radius: 2px; padding: 0 6px; font: 500 0.74rem var(--font-data); color: var(--ink-2); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.score { font: 700 0.8rem var(--font-data); color: var(--ok); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* rubber stamps */
+.badge { border: 2px solid currentColor; border-radius: 3px; padding: 1px 7px; font: 700 0.68rem/1.4 var(--font-data); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; transform: rotate(-2deg); background: transparent; }
+.b-ok { color: var(--ok); }
+.b-warn { color: var(--warn); }
+.b-wait { color: var(--stamp); }
+.b-done { color: var(--ink-2); }
+.b-bad { color: var(--bad); }
+
+/* lists + tables (staff) */
+.rows { list-style: none; margin: 0; padding: 0; }
+.rows > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 18px; padding: 15px 18px; border-top: 1.5px solid var(--line); align-items: center; }
+.rows > li:first-child { border-top: 0; }
+.rows .main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rows .btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+@media (max-width: 640px) { .rows > li { grid-template-columns: minmax(0, 1fr); } }
+.strip { display: flex; flex-wrap: wrap; gap: 8px 26px; font-size: 0.9rem; color: var(--ink-2); }
+.strip span { display: flex; flex-direction: column; }
+.strip b { font: 800 2rem/1 var(--font-display); font-stretch: 80%; color: var(--ink); }
+.code { font: 700 2rem/1 var(--font-data); letter-spacing: 0.2em; background: var(--tag); color: var(--tag-ink); padding: 12px 18px; border-radius: 3px; border: 2px dashed var(--tag-ink); display: inline-block; }
+.code.small { font-size: 1rem; padding: 3px 9px; letter-spacing: 0.12em; border-width: 1.5px; }
+.meter { height: 10px; border-radius: 2px; background: var(--surface-2); border: 1.5px solid var(--ink); overflow: hidden; min-width: 100px; }
+.meter > i { display: block; height: 100%; background: var(--ok); }
+.meter.over > i { background: var(--bad); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { text-align: left; padding: 9px 12px; border-top: 1.5px solid var(--line); vertical-align: top; }
+th { font: 700 0.7rem var(--font-data); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); background: var(--surface-2); border-top: 0; white-space: nowrap; }
+td.num, th.num { font-variant-numeric: tabular-nums; }
+.inline { max-width: 220px; padding: 5px 8px !important; font-size: 0.88rem; }
+.callout { background: var(--tag); color: var(--tag-ink); border: 1.5px solid var(--ink); border-radius: var(--radius); padding: 12px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; }
+.empty { text-align: center; padding: 40px 16px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.empty h3 { max-width: 30ch; font-size: 1.5rem; }
+
+/* modal + toast */
+.scrim { position: fixed; inset: 0; background: rgba(20, 18, 10, 0.6); display: grid; place-items: start center; overflow-y: auto; padding: 5vh max(16px, env(safe-area-inset-left, 0px)) 5vh; z-index: 20; }
+.modal { background: var(--surface); border-radius: var(--radius); padding: 24px; width: min(560px, 100%); display: flex; flex-direction: column; gap: 16px; border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+.modal.wide { width: min(860px, 100%); }
+.modal header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.tabs { display: flex; gap: 0; border: 1.5px solid var(--ink); border-radius: var(--radius); overflow: hidden; }
+.tabs button { flex: 1; border: 0; background: none; padding: 8px; font-weight: 700; cursor: pointer; color: var(--ink-2); }
+.tabs button + button { border-left: 1.5px solid var(--ink); }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: var(--radius); z-index: 40; max-width: min(92vw, 520px); font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.15s; border-left: 6px solid var(--tag); }
+#toast.show { opacity: 1; }
+#toast.err { background: var(--bad); color: #fff; border-left-color: #fff; }
+footer.foot { margin-top: 40px; padding-top: 14px; border-top: 3px solid var(--ink); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 0.85rem; color: var(--ink-2); }
+.hood { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 0; }
+.hood div { border: 1.5px solid var(--line-strong); border-radius: var(--radius); padding: 11px 13px; background: var(--surface); }
+.hood dt { font: 700 0.74rem var(--font-data); text-transform: uppercase; letter-spacing: 0.06em; }
+.hood dd { margin: 3px 0 0; color: var(--ink-2); font-size: 0.88rem; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* DSA Lab and engine badge */
+.engine { margin: 0; font-size: 0.82rem; color: var(--ink-2); }
+.engine .btn.ghost { padding-block: 0; }
+.labgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.labcol h3 { margin: 0; }
+.lab-cells { display: flex; flex-wrap: wrap; gap: 3px; }
+.lab-cell { min-width: 14px; height: 22px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center; font: 600 0.62rem var(--font-data); border: 1px solid var(--line-strong); border-radius: 3px; background: var(--surface); color: var(--ink-2); }
+.lab-cell.hit { background: var(--surface-2); border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink-2); }
+.lab-cell.found { background: var(--brand); border-color: var(--ink); color: var(--brand-ink); box-shadow: none; }
+.small { font-size: 0.82rem; }
+.barrow { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
+.bars { display: flex; flex-direction: column; gap: 3px; }
+.bar { display: block; height: 16px; border-radius: 3px; border: 1.5px solid var(--ink); position: relative; min-width: 6px; }
+.bar i { position: absolute; left: calc(100% + 6px); top: -1px; font: 600 0.72rem var(--font-data); font-style: normal; color: var(--ink-2); white-space: nowrap; }
+.b-lin { background: var(--bad); }
+.b-jmp { background: var(--ink-2); }
+.b-bin { background: var(--brand); }
+.key { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 10px; border: 1.5px solid var(--ink); border-radius: 2px; vertical-align: -1px; }
+.key:first-child { margin-left: 0; }
+</style></head><body><div id="app"></div><div id="toast" role="status" aria-live="polite"></div>
+<script>/* FINDr DSA module: Trie, chained Hash Table, Max-Heap, Stack, sorting/searching, string matching.
+   Works in the browser (window.DSA) and in Node (module.exports). */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.DSA = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  /* ---------- Text helpers ---------- */
+  function normalize(s) {
+    return String(s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function tokenize(s) {
+    const n = normalize(s);
+    return n ? n.split(" ") : [];
+  }
+
+  /* ---------- Trie (prefix tree) ---------- */
+  class TrieNode {
+    constructor() {
+      this.children = new Map();
+      this.ids = new Set(); // item ids whose word ends here
+    }
+  }
+  class Trie {
+    constructor() {
+      this.root = new TrieNode();
+      this.wordCount = 0;
+    }
+    insert(word, id) {
+      const w = normalize(word);
+      if (!w) return;
+      let node = this.root;
+      for (const ch of w) {
+        if (!node.children.has(ch)) node.children.set(ch, new TrieNode());
+        node = node.children.get(ch);
+      }
+      if (!node.ids.has(id)) {
+        node.ids.add(id);
+        this.wordCount++;
+      }
+    }
+    insertText(text, id) {
+      for (const t of tokenize(text)) this.insert(t, id);
+    }
+    remove(word, id) {
+      const w = normalize(word);
+      const path = [];
+      let node = this.root;
+      for (const ch of w) {
+        if (!node.children.has(ch)) return false;
+        path.push([node, ch]);
+        node = node.children.get(ch);
+      }
+      if (!node.ids.delete(id)) return false;
+      this.wordCount--;
+      // prune empty branches
+      for (let i = path.length - 1; i >= 0; i--) {
+        const [parent, ch] = path[i];
+        const child = parent.children.get(ch);
+        if (child.ids.size === 0 && child.children.size === 0) parent.children.delete(ch);
+        else break;
+      }
+      return true;
+    }
+    removeText(text, id) {
+      for (const t of tokenize(text)) this.remove(t, id);
+    }
+    _find(prefix) {
+      let node = this.root;
+      for (const ch of prefix) {
+        node = node.children.get(ch);
+        if (!node) return null;
+      }
+      return node;
+    }
+    /** Set of ids having any word starting with prefix. */
+    searchPrefix(prefix) {
+      const p = normalize(prefix);
+      const out = new Set();
+      if (!p) return out;
+      const start = this._find(p);
+      if (!start) return out;
+      const stack = [start];
+      while (stack.length) {
+        const n = stack.pop();
+        for (const id of n.ids) out.add(id);
+        for (const c of n.children.values()) stack.push(c);
+      }
+      return out;
+    }
+    /** Word completions for a prefix (for the auto-complete dropdown). */
+    suggest(prefix, limit = 6) {
+      const p = normalize(prefix);
+      const res = [];
+      if (!p) return res;
+      const start = this._find(p);
+      if (!start) return res;
+      const walk = (node, acc) => {
+        if (res.length >= limit) return;
+        if (node.ids.size) res.push(acc);
+        const keys = [...node.children.keys()].sort();
+        for (const k of keys) walk(node.children.get(k), acc + k);
+      };
+      walk(start, p);
+      return res;
+    }
+    hasPrefix(prefix) {
+      const p = normalize(prefix);
+      return p ? !!this._find(p) : false;
+    }
+  }
+
+  /* ---------- Hash Table with separate chaining (linked lists) ---------- */
+  class ChainNode {
+    constructor(key, value, next) {
+      this.key = key;
+      this.value = value;
+      this.next = next || null;
+    }
+  }
+  class HashTable {
+    constructor(capacity = 16) {
+      this.buckets = new Array(capacity).fill(null);
+      this.size = 0;
+      this.collisions = 0;
+    }
+    _hash(key) {
+      // djb2 string hash
+      const s = String(key);
+      let h = 5381;
+      for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+      return h % this.buckets.length;
+    }
+    set(key, value) {
+      const i = this._hash(key);
+      for (let n = this.buckets[i]; n; n = n.next) {
+        if (n.key === key) { n.value = value; return; }
+      }
+      if (this.buckets[i]) this.collisions++;
+      this.buckets[i] = new ChainNode(key, value, this.buckets[i]);
+      this.size++;
+      if (this.size / this.buckets.length > 0.75) this._resize();
+    }
+    get(key) {
+      for (let n = this.buckets[this._hash(key)]; n; n = n.next) if (n.key === key) return n.value;
+      return undefined;
+    }
+    has(key) { return this.get(key) !== undefined; }
+    delete(key) {
+      const i = this._hash(key);
+      let prev = null;
+      for (let n = this.buckets[i]; n; prev = n, n = n.next) {
+        if (n.key === key) {
+          if (prev) prev.next = n.next; else this.buckets[i] = n.next;
+          this.size--;
+          return true;
+        }
+      }
+      return false;
+    }
+    _resize() {
+      const old = this.buckets;
+      this.buckets = new Array(old.length * 2).fill(null);
+      this.size = 0;
+      this.collisions = 0;
+      for (const head of old) for (let n = head; n; n = n.next) this.set(n.key, n.value);
+    }
+    keys() { const o = []; for (const h of this.buckets) for (let n = h; n; n = n.next) o.push(n.key); return o; }
+    values() { const o = []; for (const h of this.buckets) for (let n = h; n; n = n.next) o.push(n.value); return o; }
+    longestChain() {
+      let m = 0;
+      for (const h of this.buckets) { let c = 0; for (let n = h; n; n = n.next) c++; if (c > m) m = c; }
+      return m;
+    }
+  }
+
+  /* ---------- Max-Heap / Priority Queue ---------- */
+  class MaxHeap {
+    /** cmp(a,b) > 0 means a has higher priority than b. Default: numeric priority field. */
+    constructor(cmp) {
+      this.a = [];
+      this.cmp = cmp || ((x, y) => x.priority - y.priority);
+    }
+    get size() { return this.a.length; }
+    peek() { return this.a[0]; }
+    push(v) {
+      const a = this.a;
+      a.push(v);
+      let i = a.length - 1;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (this.cmp(a[i], a[p]) <= 0) break;
+        [a[i], a[p]] = [a[p], a[i]];
+        i = p;
+      }
+    }
+    pop() {
+      const a = this.a;
+      if (!a.length) return undefined;
+      const top = a[0];
+      const last = a.pop();
+      if (a.length) {
+        a[0] = last;
+        let i = 0;
+        for (;;) {
+          const l = 2 * i + 1, r = l + 1;
+          let m = i;
+          if (l < a.length && this.cmp(a[l], a[m]) > 0) m = l;
+          if (r < a.length && this.cmp(a[r], a[m]) > 0) m = r;
+          if (m === i) break;
+          [a[i], a[m]] = [a[m], a[i]];
+          i = m;
+        }
+      }
+      return top;
+    }
+    /** Non-destructive ranked list (highest priority first). */
+    ranked(limit = Infinity) {
+      const copy = new MaxHeap(this.cmp);
+      copy.a = this.a.slice();
+      const out = [];
+      while (copy.size && out.length < limit) out.push(copy.pop());
+      return out;
+    }
+    static from(items, cmp) {
+      const h = new MaxHeap(cmp);
+      for (const it of items) h.push(it);
+      return h;
+    }
+  }
+
+  /* ---------- Stack (array-backed LIFO) ---------- */
+  class Stack {
+    constructor() { this.items = []; }
+    push(v) { this.items.push(v); }
+    pop() { return this.items.pop(); }
+    peek() { return this.items[this.items.length - 1]; }
+    get size() { return this.items.length; }
+    isEmpty() { return this.items.length === 0; }
+    toArray() { return this.items.slice(); } // bottom -> top
+  }
+
+  /* ---------- Sorting & Searching ---------- */
+  function mergeSort(arr, cmp) {
+    cmp = cmp || ((x, y) => (x < y ? -1 : x > y ? 1 : 0));
+    if (arr.length <= 1) return arr.slice();
+    const mid = arr.length >> 1;
+    const l = mergeSort(arr.slice(0, mid), cmp);
+    const r = mergeSort(arr.slice(mid), cmp);
+    const out = [];
+    let i = 0, j = 0;
+    while (i < l.length && j < r.length) out.push(cmp(l[i], r[j]) <= 0 ? l[i++] : r[j++]); // stable
+    while (i < l.length) out.push(l[i++]);
+    while (j < r.length) out.push(r[j++]);
+    return out;
+  }
+  /** First index in sorted arr whose keyFn(item) >= target (arr ascending by keyFn). */
+  function lowerBound(arr, target, keyFn) {
+    keyFn = keyFn || ((x) => x);
+    let lo = 0, hi = arr.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (keyFn(arr[mid]) < target) lo = mid + 1; else hi = mid;
+    }
+    return lo;
+  }
+  function binarySearch(arr, target, keyFn) {
+    keyFn = keyFn || ((x) => x);
+    const i = lowerBound(arr, target, keyFn);
+    return i < arr.length && keyFn(arr[i]) === target ? i : -1;
+  }
+  /** Items with lo <= key <= hi from an array sorted ascending by keyFn. */
+  function rangeQuery(arr, lo, hi, keyFn) {
+    keyFn = keyFn || ((x) => x);
+    const out = [];
+    for (let i = lowerBound(arr, lo, keyFn); i < arr.length && keyFn(arr[i]) <= hi; i++) out.push(arr[i]);
+    return out;
+  }
+
+  /* ---------- String validation for claims / matching ---------- */
+  function levenshtein(a, b) {
+    a = String(a); b = String(b);
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    let prev = new Array(b.length + 1);
+    for (let j = 0; j <= b.length; j++) prev[j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  const STOPWORDS = new Set(["the", "and", "with", "has", "have", "there", "this", "that", "its", "for", "are", "was", "from", "near", "some"]);
+  /** 0..1 similarity between two single words. */
+  function wordSimilarity(a, b) {
+    const m = Math.max(a.length, b.length);
+    return m ? 1 - levenshtein(a, b) / m : 1;
+  }
+  /**
+   * How well does the owner's claimed text match the private details on file?
+   * Each secret token is satisfied by a close claimed token (typo tolerant).
+   * Returns { score 0..1, matched[], missed[] }.
+   */
+  function claimMatch(secret, claimed) {
+    const sec = [...new Set(tokenize(secret))].filter((t) => t.length > 2 && !STOPWORDS.has(t));
+    const cl = tokenize(claimed);
+    if (!sec.length) return { score: 0, matched: [], missed: [] };
+    const matched = [], missed = [];
+    for (const s of sec) {
+      const ok = cl.some((c) => c === s || (s.length > 3 && wordSimilarity(c, s) >= 0.75));
+      (ok ? matched : missed).push(s);
+    }
+    return { score: matched.length / sec.length, matched, missed };
+  }
+
+  return { normalize, tokenize, Trie, HashTable, MaxHeap, Stack, mergeSort, lowerBound, binarySearch, rangeQuery, levenshtein, wordSimilarity, claimMatch };
+});
+
+;
+/* FINDr domain layer: lifecycle, search, smart matching, secure claims, retention, audit.
+   Built on dsa.js. Works in the browser (window.FindrStore) and Node. */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./dsa.js"));
+  else root.FindrStore = factory(root.DSA);
+})(typeof self !== "undefined" ? self : this, function (DSA) {
+  "use strict";
+  const { Trie, HashTable, MaxHeap, Stack, mergeSort, lowerBound, rangeQuery, tokenize, normalize, claimMatch, wordSimilarity } = DSA;
+
+  const MIN = 60000, HOUR = 3600000, DAY = 86400000;
+  const STAFF_PIN = "2026";
+  const S = { PENDING: "PENDING_DROPOFF", UNCLAIMED: "UNCLAIMED", CLAIM_PENDING: "CLAIM_PENDING", CLAIMED: "CLAIMED", ARCHIVED: "ARCHIVED" };
+  const LABEL = { PENDING_DROPOFF: "Pending Drop-Off", UNCLAIMED: "Unclaimed", CLAIM_PENDING: "Claim Pending", CLAIMED: "Claimed", ARCHIVED: "Archived" };
+  const ALLOWED = {
+    PENDING_DROPOFF: ["UNCLAIMED", "ARCHIVED"],
+    UNCLAIMED: ["CLAIM_PENDING", "ARCHIVED"],
+    CLAIM_PENDING: ["CLAIMED", "UNCLAIMED"],
+    CLAIMED: ["ARCHIVED"],
+    ARCHIVED: [],
+  };
+  const CATEGORIES = [
+    ["bags", "Bags"], ["electronics", "Electronics"], ["wallets", "Wallets & Cards"], ["ids", "IDs"],
+    ["keys", "Keys"], ["clothing", "Clothing"], ["umbrellas", "Umbrellas"], ["bottles", "Bottles"],
+    ["stationery", "Books & Stationery"], ["accessories", "Accessories"], ["other", "Other"],
+  ];
+  const GATES = [["g-main", "Main Gate"], ["g-eng", "Engineering Gate"], ["g-lib", "Library Entrance"], ["g-gym", "Gymnasium Gate"]];
+
+  /* Vocabulary / taxonomy mismatch: synonym groups (English, Filipino, brand names). */
+  const SYN_GROUPS = [
+    ["umbrella", "payong", "parasol"],
+    ["phone", "cellphone", "mobile", "smartphone", "iphone", "android", "cp", "samsung"],
+    ["wallet", "purse", "billfold", "pitaka", "cardholder"],
+    ["bag", "backpack", "bagpack", "knapsack", "sling", "tote", "satchel", "handbag"],
+    ["bottle", "tumbler", "flask", "hydroflask", "hydro", "canteen"],
+    ["earbuds", "earphones", "airpods", "earpods", "headphones", "headset"],
+    ["id", "identification", "lanyard"],
+    ["key", "keys", "susi", "keychain", "keyring"],
+    ["laptop", "macbook", "chromebook", "notebookpc"],
+    ["charger", "cable", "adapter", "powerbank"],
+    ["jacket", "hoodie", "sweater", "jumper", "cardigan", "coat", "raincoat"],
+    ["glasses", "eyeglasses", "spectacles", "specs", "salamin"],
+    ["calculator", "calc", "casio"],
+    ["book", "textbook", "notebook", "reviewer"],
+    ["pen", "ballpen", "pencil", "marker"],
+    ["watch", "wristwatch", "smartwatch"],
+  ];
+  const stem = (w) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us") && !w.endsWith("is") ? w.slice(0, -1) : w);
+  const SYN = new HashTable(128); // word -> group index
+  SYN_GROUPS.forEach((g, i) => g.forEach((w) => { SYN.set(w, i); SYN.set(stem(w), i); }));
+  const synGroup = (w) => { const a = SYN.get(w); return a !== undefined ? a : SYN.get(stem(w)); };
+
+  const STOP = new Set(["a", "an", "the", "and", "or", "of", "on", "in", "at", "to", "with", "for", "is", "it", "its", "was", "has", "have", "my", "me", "near", "this", "that", "some"]);
+  const MATCH_STOP = new Set(["lost", "found", "missing", "please", "item", "thing", "color", "colour"]);
+  const cleanTokens = (text) => tokenize(text).filter((t) => t.length > 1 && !STOP.has(t));
+  const canon = (t) => { const g = synGroup(t); return g === undefined ? stem(t) : "g" + g; };
+  const withSynonyms = (tokens) => {
+    const out = new Set(tokens);
+    for (const t of tokens) { const g = synGroup(t); if (g !== undefined) SYN_GROUPS[g].forEach((w) => out.add(w)); }
+    return [...out];
+  };
+
+  const MATCH_THRESHOLD = 0.55;
+  const CLAIM_PASS = 0.5;
+  const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+  class Store {
+    constructor(opts = {}) {
+      this.clock = opts.clock || (() => Date.now());
+      this.rng = opts.rng || Math.random;
+      this.storage = opts.storage || null;
+      this.storageKey = opts.storageKey || "findr.v1";
+      this.storageError = false;
+      this._reset();
+      this.loaded = this._load();
+      if (this.loaded) this.sweepRetention();
+    }
+
+    /* ===== state ===== */
+    _reset() {
+      this.items = new HashTable(64);
+      this.categories = new HashTable(16);
+      this.gates = new HashTable(8);
+      this.sessions = new HashTable(16);
+      this.codes = new HashTable(64);
+      this.attempts = new HashTable(16);
+      this.strikes = new HashTable(16);
+      this.titleGroups = new HashTable(64);
+      this.vocab = new HashTable(128);
+      this.alertKeys = new HashTable(32);
+      this.history = new HashTable(64); // itemId -> Stack of transitions
+      this.undoStack = new Stack(); // global LIFO of transitions
+      this.trie = new Trie(); // searchable items
+      this.reportTrie = new Trie(); // open missing-item reports
+      this.byTime = []; // all items sorted ascending by foundAt
+      this.reports = []; this.claims = []; this.alerts = []; this.audit = [];
+      this.settings = { retentionDays: 30 };
+      this.seq = { item: 0, report: 0, claim: 0, alert: 0, audit: 0 };
+      CATEGORIES.forEach(([id, label]) => this.categories.set(id, { id, label, count: 0 }));
+      GATES.forEach(([id, name]) => this.gates.set(id, { id, name }));
+    }
+    now() { return this.clock(); }
+
+    _save() {
+      if (!this.storage) return;
+      try {
+        const snap = {
+          v: 1,
+          items: this.items.values().map((it) => JSON.parse(JSON.stringify(it, (k, v) => (k[0] === "_" ? undefined : v)))),
+          reports: this.reports, claims: this.claims, alerts: this.alerts, audit: this.audit,
+          history: this.history.keys().map((k) => [k, this.history.get(k).toArray()]),
+          undo: this.undoStack.toArray(),
+          attempts: this.attempts.keys().map((k) => [k, this.attempts.get(k)]),
+          strikes: this.strikes.keys().map((k) => [k, this.strikes.get(k)]),
+          sessions: this.sessions.values(),
+          settings: this.settings, seq: this.seq,
+        };
+        this.storage.setItem(this.storageKey, JSON.stringify(snap));
+        this.storageError = false;
+      } catch (e) { this.storageError = true; }
+    }
+    _load() {
+      if (!this.storage) return false;
+      let snap;
+      try { snap = JSON.parse(this.storage.getItem(this.storageKey) || "null"); } catch (e) { snap = null; }
+      if (!snap || snap.v !== 1) return false;
+      this.settings = snap.settings; this.seq = snap.seq;
+      this.reports = snap.reports; this.claims = snap.claims; this.alerts = snap.alerts; this.audit = snap.audit;
+      for (const it of snap.items) this._ingestItem(it);
+      for (const [k, arr] of snap.history) { const st = new Stack(); arr.forEach((e) => st.push(e)); this.history.set(k, st); }
+      snap.undo.forEach((id) => this.undoStack.push(id));
+      snap.attempts.forEach(([k, v]) => this.attempts.set(k, v));
+      snap.strikes.forEach(([k, v]) => this.strikes.set(k, v));
+      snap.sessions.forEach((s) => this.sessions.set(s.token, s));
+      for (const r of this.reports) { r.alertKeys = undefined; if (r.status === "OPEN") this._indexReport(r); }
+      for (const a of this.alerts) this.alertKeys.set(a.reportId + "|" + a.itemId, a.id);
+      return true;
+    }
+    /* Load one item into every index (hash table, title groups, time order, codes, trie). Used by _load and by remote stores. */
+    _ingestItem(it) {
+      this.items.set(it.id, it);
+      this._groupAdd(it);
+      this.byTime.splice(lowerBound(this.byTime, it.foundAt + 1, (x) => x.foundAt), 0, it);
+      if (it.status === S.PENDING && it.code) this.codes.set(it.code, it.id);
+      if (this._searchable(it)) this._index(it);
+    }
+    clearAll() { if (this.storage) { try { this.storage.removeItem(this.storageKey); } catch (e) {} } this._reset(); }
+
+    /* ===== sessions & permissions ===== */
+    login(role, { name, studentId, pin } = {}) {
+      name = String(name || "").trim();
+      studentId = String(studentId || "").trim();
+      if (name.length < 2) throw new Error("Please enter your name.");
+      if (role === "staff") {
+        if (pin !== STAFF_PIN) throw new Error("Incorrect staff PIN.");
+        studentId = studentId || "STAFF";
+      } else {
+        if (!/^[A-Za-z0-9-]{4,16}$/.test(studentId)) throw new Error("Enter a valid student / employee ID (4–16 letters, digits or dashes).");
+        role = "student";
+      }
+      const token = "T" + Math.floor(this.rng() * 1e9).toString(36) + this.now().toString(36);
+      const s = { token, role, name, studentId, at: this.now(), submissions: [] };
+      this.sessions.set(token, s);
+      this._save();
+      return s;
+    }
+    logout(token) { this.sessions.delete(token); this._save(); }
+    session(token) { return token ? this.sessions.get(token) || null : null; }
+    _need(token, role) {
+      const s = this.session(token);
+      if (!s) throw new Error("Please sign in first.");
+      if (role && s.role !== role) throw new Error(role === "staff" ? "Staff access only." : "Students and employees only.");
+      return s;
+    }
+
+    /* ===== audit + history (Stack) ===== */
+    _log(actor, action, itemId, detail) {
+      const e = { seq: ++this.seq.audit, at: this.now(), actor: actor.name, role: actor.role, action, itemId: itemId || null, detail: detail || "" };
+      this.audit.push(e);
+      return e;
+    }
+    _hist(id) { let st = this.history.get(id); if (!st) { st = new Stack(); this.history.set(id, st); } return st; }
+    _transition(item, to, actor, type, extra = {}) {
+      const from = item.status;
+      if (!ALLOWED[from].includes(to)) throw new Error(`Cannot move an item from ${LABEL[from]} to ${LABEL[to]}.`);
+      const wasSearchable = this._searchable(item);
+      item.status = to;
+      this._hist(item.id).push({ type, from, to, at: this.now(), actor: actor.name, ...extra });
+      this.undoStack.push(item.id);
+      this._reindex(item, wasSearchable);
+    }
+
+    /* ===== indexing ===== */
+    _searchable(it) { return it.status === S.UNCLAIMED || it.status === S.CLAIM_PENDING; }
+    _tokens(it) { return [...new Set(cleanTokens([it.title, it.tags.join(" "), this.categories.get(it.category).label, it.description].join(" ")))]; }
+    _index(it) {
+      it._idx = withSynonyms(this._tokens(it));
+      for (const w of it._idx) { this.trie.insert(w, it.id); this.vocab.set(w, (this.vocab.get(w) || 0) + 1); }
+      this.categories.get(it.category).count++;
+    }
+    _unindex(it) {
+      for (const w of it._idx || []) {
+        this.trie.remove(w, it.id);
+        const c = (this.vocab.get(w) || 1) - 1;
+        if (c <= 0) this.vocab.delete(w); else this.vocab.set(w, c);
+      }
+      it._idx = [];
+      this.categories.get(it.category).count--;
+    }
+    _reindex(it, wasSearchable) {
+      const now = this._searchable(it);
+      if (wasSearchable && !now) this._unindex(it);
+      else if (!wasSearchable && now) this._index(it);
+    }
+    _groupKey(it) { return it.category + "|" + normalize(it.title); }
+    _groupAdd(it) { const k = this._groupKey(it); const a = this.titleGroups.get(k) || []; a.push(it.id); this.titleGroups.set(k, a); }
+    _indexReport(r) { for (const w of withSynonyms(cleanTokens([r.title, r.tags.join(" "), r.description].join(" ")))) this.reportTrie.insert(w, r.id); }
+    _unindexReport(r) { for (const w of withSynonyms(cleanTokens([r.title, r.tags.join(" "), r.description].join(" ")))) this.reportTrie.remove(w, r.id); }
+
+    /* ===== views (what each audience may see) ===== */
+    publicItem(it) {
+      const g = this.titleGroups.get(this._groupKey(it)) || [];
+      const twins = g.filter((id) => id !== it.id && this._searchable(this.items.get(id))).length;
+      return {
+        id: it.id, title: it.title, category: it.category, categoryLabel: this.categories.get(it.category).label,
+        tags: it.tags, description: it.description, gate: it.gate, gateName: this.gates.get(it.gate).name,
+        foundAt: it.foundAt, status: it.status, statusLabel: LABEL[it.status], photo: it.photo || null, lookalikes: twins,
+      };
+    }
+    staffItem(it) {
+      const age = (this.now() - it.foundAt) / DAY;
+      return { ...this.publicItem(it), secret: it.secret || "", finderName: it.finderName, finderId: it.finderId, code: it.code || null, flaggedAt: it.flaggedAt || null, disposition: it.disposition || null, source: it.source, ageDays: age, createdAt: it.createdAt };
+    }
+    getItem(id, staff) { const it = this.items.get(id); if (!it) return null; return staff ? this.staffItem(it) : this.publicItem(it); }
+    lookalikes(id) {
+      const it = this.items.get(id);
+      if (!it) return [];
+      const ids = (this.titleGroups.get(this._groupKey(it)) || []).map((i) => this.items.get(i)).filter((x) => this._searchable(x));
+      return mergeSort(ids, (a, b) => a.foundAt - b.foundAt).map((x) => this.publicItem(x));
+    }
+
+    /* ===== search (Trie + sorting + binary search range) ===== */
+    suggest(text, limit = 6) {
+      const toks = tokenize(text);
+      if (!toks.length) return [];
+      const last = toks.pop();
+      const head = toks.join(" ");
+      return this.trie.suggest(last, limit).map((w) => (head ? head + " " : "") + w);
+    }
+    search({ q = "", category = "", gate = "", from = null, to = null, sort = "relevance" } = {}) {
+      const toks = cleanTokens(q);
+      let didYouMean = null;
+      const scores = new Map();
+      if (!toks.length) {
+        for (const it of this.byTime) if (this._searchable(it)) scores.set(it.id, 0);
+      } else {
+        let corrected = false;
+        const fixed = toks.map((t) => {
+          if (this.trie.hasPrefix(t)) return t;
+          let best = null, bs = 0;
+          for (const w of this.vocab.keys()) { const s = wordSimilarity(t, w); if (s > bs) { bs = s; best = w; } }
+          if (best && bs >= 0.75) { corrected = true; return best; }
+          return t;
+        });
+        if (corrected) didYouMean = fixed.join(" ");
+        const sets = fixed.map((t) => this.trie.searchPrefix(t));
+        const order = sets.map((s, i) => i).sort((a, b) => sets[a].size - sets[b].size);
+        let inter = new Set(sets[order[0]]);
+        for (const i of order.slice(1)) inter = new Set([...inter].filter((id) => sets[i].has(id)));
+        const pool = inter.size ? inter : new Set(sets.flatMap((s) => [...s])); // fall back to any-word match
+        for (const id of pool) {
+          const it = this.items.get(id);
+          const titleToks = cleanTokens(it.title);
+          let sc = 0;
+          for (let i = 0; i < fixed.length; i++) {
+            if (!sets[i].has(id)) continue;
+            sc += titleToks.some((w) => w.startsWith(fixed[i])) ? 3 : 1;
+          }
+          scores.set(id, sc);
+        }
+      }
+      let ids = [...scores.keys()];
+      if (from != null || to != null) {
+        const inRange = new Set(rangeQuery(this.byTime, from == null ? -Infinity : from, to == null ? Infinity : to, (x) => x.foundAt).map((x) => x.id));
+        ids = ids.filter((id) => inRange.has(id));
+      }
+      let rows = ids.map((id) => this.items.get(id)).filter((it) => (!category || it.category === category) && (!gate || it.gate === gate));
+      const cmp = sort === "oldest" ? (a, b) => a.foundAt - b.foundAt
+        : sort === "newest" ? (a, b) => b.foundAt - a.foundAt
+        : (a, b) => scores.get(b.id) - scores.get(a.id) || b.foundAt - a.foundAt;
+      rows = mergeSort(rows, cmp);
+      return { results: rows.map((it) => ({ item: this.publicItem(it), score: scores.get(it.id) })), didYouMean, total: rows.length };
+    }
+
+    /* ===== validation helpers ===== */
+    _looksSpammy(text) {
+      const t = String(text || "");
+      if (/(.)\1{5,}/.test(t)) return true;
+      if (/https?:\/\/|www\.|\.com\b/i.test(t)) return true;
+      const letters = t.replace(/[^a-z]/gi, "");
+      if (letters.length >= 6 && !/[aeiou]/i.test(letters)) return true;
+      return false;
+    }
+    _fields(data, staff) {
+      const title = String(data.title || "").trim();
+      if (title.length < 3 || title.length > 60) throw new Error("Give the item a short title (3–60 characters).");
+      const description = String(data.description || "").trim().slice(0, 300);
+      if (this._looksSpammy(title) || this._looksSpammy(description)) throw new Error("That entry looks like spam. Please describe the item plainly.");
+      if (!this.categories.has(data.category)) throw new Error("Choose a category.");
+      if (!this.gates.has(data.gate)) throw new Error("Choose a gate or location.");
+      const tags = [...new Set(String(Array.isArray(data.tags) ? data.tags.join(",") : data.tags || "").split(/[,;\n]/).map((x) => normalize(x)).filter(Boolean))].slice(0, 8);
+      const foundAt = Number(data.foundAt) || this.now();
+      if (foundAt > this.now() + 5 * MIN) throw new Error("The time found can't be in the future.");
+      if (!staff && foundAt < this.now() - 7 * DAY) throw new Error("Self-service reports must be within the last 7 days. Bring older items to the security office.");
+      return { title, description, category: data.category, gate: data.gate, tags, foundAt };
+    }
+    _newCode() {
+      for (;;) {
+        let c = "";
+        for (let i = 0; i < 5; i++) c += CODE_ALPHABET[Math.floor(this.rng() * CODE_ALPHABET.length)];
+        if (!this.codes.has(c)) return c;
+      }
+    }
+
+    /* ===== intake (self-service = pending; staff = straight to Unclaimed) ===== */
+    createFoundItem(token, data) {
+      const s = this._need(token);
+      const staff = s.role === "staff";
+      if (!staff) {
+        if ((this.strikes.get(s.studentId) || 0) >= 2) throw new Error("Self-service reports are paused on your account. Please hand items directly to campus security.");
+        if (data.website) throw new Error("Submission blocked.");
+        s.submissions = s.submissions.filter((t) => t > this.now() - 10 * MIN);
+        if (s.submissions.length >= 3) throw new Error("Too many reports in a short time. Try again in a few minutes.");
+      }
+      const f = this._fields(data, staff);
+      const dupKey = this._groupKey(f) + "|" + f.gate;
+      const dup = this.items.values().find((it) => this._groupKey(it) + "|" + it.gate === dupKey && it.createdAt > this.now() - 10 * MIN && it.finderId === s.studentId);
+      if (dup) throw new Error("You already reported this item a moment ago.");
+      const it = {
+        id: "I-" + String(++this.seq.item).padStart(4, "0"), ...f,
+        photo: data.photo || null, secret: String(data.secret || "").trim().slice(0, 300),
+        status: staff ? S.UNCLAIMED : S.PENDING, finderName: s.name, finderId: s.studentId,
+        source: staff ? "staff" : "self-service", createdAt: this.now(), code: null,
+      };
+      if (!staff) { it.code = this._newCode(); this.codes.set(it.code, it.id); s.submissions.push(this.now()); }
+      this.items.set(it.id, it);
+      this._groupAdd(it);
+      this.byTime.splice(lowerBound(this.byTime, it.foundAt + 1, (x) => x.foundAt), 0, it);
+      this._hist(it.id).push({ type: "create", from: null, to: it.status, at: this.now(), actor: s.name });
+      if (this._searchable(it)) this._index(it);
+      this._log(s, "ITEM_LOGGED", it.id, `${it.title} @ ${this.gates.get(it.gate).name} (${staff ? "staff intake" : "self-service, awaiting drop-off"})`);
+      const alerts = this._searchable(it) ? this._matchItemAgainstReports(it, s) : [];
+      this._save();
+      return { item: this.staffItem(it), alerts: alerts.length };
+    }
+
+    /* ===== staff: verify drop-off, reject spam ===== */
+    pendingQueue(gate) {
+      const rows = this.items.values().filter((it) => it.status === S.PENDING && (!gate || it.gate === gate));
+      return mergeSort(rows, (a, b) => a.createdAt - b.createdAt).map((it) => ({ ...this.staffItem(it), stale: this.now() - it.createdAt > 48 * HOUR }));
+    }
+    receiveItem(token, idOrCode, secret) {
+      const s = this._need(token, "staff");
+      const key = String(idOrCode || "").trim().toUpperCase();
+      const id = this.codes.get(key) || (this.items.has(idOrCode) ? idOrCode : null);
+      const it = id && this.items.get(id);
+      if (!it) throw new Error("No pending item matches that drop-off code.");
+      if (it.status !== S.PENDING) throw new Error(`${it.id} is already ${LABEL[it.status]}.`);
+      if (secret != null && String(secret).trim()) it.secret = String(secret).trim().slice(0, 300);
+      this._transition(it, S.UNCLAIMED, s, "receive");
+      this.codes.delete(it.code);
+      this._log(s, "ITEM_VERIFIED", it.id, `Physically received at ${this.gates.get(it.gate).name}`);
+      const alerts = this._matchItemAgainstReports(it, s);
+      this._save();
+      return { item: this.staffItem(it), alerts: alerts.length };
+    }
+    rejectPending(token, id, reason) {
+      const s = this._need(token, "staff");
+      const it = this.items.get(id);
+      if (!it || it.status !== S.PENDING) throw new Error("Only pending items can be rejected.");
+      this._transition(it, S.ARCHIVED, s, "rejectPending", { reason: reason || "spam" });
+      this.codes.delete(it.code);
+      this.strikes.set(it.finderId, (this.strikes.get(it.finderId) || 0) + 1);
+      this._log(s, "PENDING_REJECTED", it.id, `Rejected (${reason || "spam / never dropped off"}); strike on ${it.finderId}`);
+      this._save();
+      return this.staffItem(it);
+    }
+
+    /* ===== secure claim verification ===== */
+    submitClaim(token, itemId, details, contact) {
+      const s = this._need(token, "student");
+      const it = this.items.get(itemId);
+      if (!it) throw new Error("Item not found.");
+      if (it.status !== S.UNCLAIMED) throw new Error(it.status === S.CLAIM_PENDING ? "Someone has already started a claim on this item. Visit the security office if it's yours." : "This item can't be claimed right now.");
+      if (it.finderId === s.studentId) throw new Error("You reported this item, so you can't claim it. Ask security if you need help.");
+      details = String(details || "").trim();
+      if (details.length < 8) throw new Error("Describe at least one detail that only the owner would know.");
+      const ak = s.studentId + "|" + it.id;
+      if ((this.attempts.get(ak) || 0) >= 3) throw new Error("Too many unsuccessful attempts. Please visit the security office with a valid ID.");
+      const manual = !it.secret;
+      const m = manual ? { score: null, matched: [], missed: [] } : claimMatch(it.secret, details);
+      if (!manual && m.score < CLAIM_PASS) {
+        this.attempts.set(ak, (this.attempts.get(ak) || 0) + 1);
+        this._log(s, "CLAIM_FAILED", it.id, `Details did not match (attempt ${this.attempts.get(ak)} of 3)`);
+        this._save();
+        return { ok: false, attemptsLeft: 3 - this.attempts.get(ak), message: "Those details don't match what security has on file. Think about marks, stickers, contents or the lock screen, and try again." };
+      }
+      const claim = { id: "C-" + String(++this.seq.claim).padStart(4, "0"), itemId: it.id, claimantId: s.studentId, claimantName: s.name, contact: String(contact || "").trim().slice(0, 80), details: details.slice(0, 300), score: m.score, matched: m.matched, missed: m.missed, manual, at: this.now(), status: "PENDING" };
+      this.claims.push(claim);
+      this._transition(it, S.CLAIM_PENDING, s, "claim", { claimId: claim.id });
+      this._log(s, "CLAIM_SUBMITTED", it.id, manual ? "No private detail on file: manual check needed" : `Detail match ${Math.round(m.score * 100)}%`);
+      this._save();
+      return { ok: true, claim };
+    }
+    claimQueue() {
+      return this.claims.filter((c) => c.status === "PENDING").map((c) => ({ claim: c, item: this.staffItem(this.items.get(c.itemId)) }));
+    }
+    approveClaim(token, claimId) {
+      const s = this._need(token, "staff");
+      const c = this.claims.find((x) => x.id === claimId && x.status === "PENDING");
+      if (!c) throw new Error("Claim not found or already decided.");
+      const it = this.items.get(c.itemId);
+      c.status = "APPROVED"; c.decidedAt = this.now();
+      it.claimedBy = c.claimantId; it.claimedAt = this.now();
+      this._transition(it, S.CLAIMED, s, "approve", { claimId });
+      this._log(s, "CLAIM_APPROVED", it.id, `Released to ${c.claimantName} (${c.claimantId}) after ID check`);
+      this._save();
+      return this.staffItem(it);
+    }
+    rejectClaim(token, claimId, reason) {
+      const s = this._need(token, "staff");
+      const c = this.claims.find((x) => x.id === claimId && x.status === "PENDING");
+      if (!c) throw new Error("Claim not found or already decided.");
+      const it = this.items.get(c.itemId);
+      c.status = "REJECTED"; c.decidedAt = this.now();
+      this._transition(it, S.UNCLAIMED, s, "rejectClaim", { claimId });
+      this._log(s, "CLAIM_REJECTED", it.id, `Claim by ${c.claimantName} rejected${reason ? ": " + reason : ""}`);
+      this._save();
+      return this.staffItem(it);
+    }
+
+    /* ===== retention (Max-Heap by age) ===== */
+    setRetention(token, days) {
+      const s = this._need(token, "staff");
+      const d = Math.max(30, Math.min(60, Math.round(Number(days) || 30)));
+      this.settings.retentionDays = d;
+      this._log(s, "RETENTION_SET", null, `Retention limit set to ${d} days`);
+      this.sweepRetention();
+      this._save();
+      return d;
+    }
+    _retentionHeap() {
+      const h = new MaxHeap((a, b) => a.priority - b.priority || (a.item.id < b.item.id ? 1 : -1));
+      for (const it of this.items.values()) if (it.status === S.UNCLAIMED) h.push({ item: it, priority: this.now() - it.foundAt });
+      return h;
+    }
+    retentionQueue(limit = 50) {
+      const lim = this.settings.retentionDays;
+      return this._retentionHeap().ranked(limit).map(({ item, priority }) => ({ item: this.staffItem(item), ageDays: priority / DAY, due: priority / DAY >= lim, daysOver: Math.max(0, priority / DAY - lim) }));
+    }
+    sweepRetention() {
+      const lim = this.settings.retentionDays;
+      const sys = { name: "System", role: "system" };
+      let flagged = 0, changed = false;
+      for (const it of this.items.values()) {
+        if (it.status !== S.UNCLAIMED) continue;
+        const due = (this.now() - it.foundAt) / DAY >= lim;
+        if (due && !it.flaggedAt) { it.flaggedAt = this.now(); flagged++; changed = true; this._log(sys, "RETENTION_FLAG", it.id, `Past ${lim}-day retention limit`); }
+        else if (!due && it.flaggedAt) { it.flaggedAt = null; changed = true; }
+      }
+      if (changed) this._save();
+      return flagged;
+    }
+    dueCount() { return this.retentionQueue(1e9).filter((r) => r.due).length; }
+    archiveItem(token, id, disposition) {
+      const s = this._need(token, "staff");
+      const it = this.items.get(id);
+      if (!it) throw new Error("Item not found.");
+      const d = disposition === "donated" ? "donated" : "archived";
+      it.disposition = d;
+      this._transition(it, S.ARCHIVED, s, "archive", { disposition: d });
+      this._log(s, d === "donated" ? "ITEM_DONATED" : "ITEM_ARCHIVED", it.id, d === "donated" ? "Donated after retention period" : "Archived after retention period");
+      this._save();
+      return this.staffItem(it);
+    }
+    processOldest(token, disposition) {
+      this._need(token, "staff");
+      const top = this._retentionHeap().pop();
+      if (!top || top.priority / DAY < this.settings.retentionDays) throw new Error("Nothing is past the retention limit.");
+      return this.archiveItem(token, top.item.id, disposition);
+    }
+
+    /* ===== rollbacks (Stack) ===== */
+    undoPeek() {
+      const id = this.undoStack.peek();
+      if (!id) return null;
+      const e = this._hist(id).peek();
+      return e ? { itemId: id, type: e.type, from: e.from, to: e.to } : null;
+    }
+    undo(token) {
+      const s = this._need(token, "staff");
+      const id = this.undoStack.pop();
+      if (!id) throw new Error("Nothing to undo.");
+      const it = this.items.get(id);
+      const e = this._hist(id).pop();
+      const wasSearchable = this._searchable(it);
+      it.status = e.from;
+      if (e.type === "claim") { const c = this.claims.find((x) => x.id === e.claimId); if (c) c.status = "CANCELLED"; }
+      if (e.type === "approve" || e.type === "rejectClaim") { const c = this.claims.find((x) => x.id === e.claimId); if (c) { c.status = "PENDING"; c.decidedAt = null; } it.claimedBy = null; it.claimedAt = null; }
+      if (e.type === "archive") it.disposition = null;
+      if (e.type === "receive") { this.codes.set(it.code, it.id); }
+      if (e.type === "rejectPending") { this.codes.set(it.code, it.id); this.strikes.set(it.finderId, Math.max(0, (this.strikes.get(it.finderId) || 1) - 1)); }
+      this._reindex(it, wasSearchable);
+      this._log(s, "ROLLBACK", it.id, `Reverted ${LABEL[e.to]} → ${LABEL[e.from]} (${e.type})`);
+      this._save();
+      return this.staffItem(it);
+    }
+    itemHistory(id) { const st = this.history.get(id); return st ? st.toArray().reverse() : []; }
+    auditLog({ itemId = "", action = "" } = {}) {
+      return this.audit.filter((e) => (!itemId || e.itemId === itemId) && (!action || e.action === action)).slice().reverse();
+    }
+
+    /* ===== missing-item reports + smart matching ===== */
+    _scoreTokens(x) { return new Set(cleanTokens([x.title, x.tags.join(" ")].join(" ")).filter((t) => !MATCH_STOP.has(t)).map(canon)); }
+    matchScore(it, r) {
+      const A = this._scoreTokens(it), B = this._scoreTokens(r);
+      let inter = 0;
+      for (const t of A) if (B.has(t)) inter++;
+      const dice = A.size + B.size ? (2 * inter) / (A.size + B.size) : 0;
+      const cat = it.category === r.category ? 1 : 0;
+      const loc = it.gate === r.gate ? 1 : 0;
+      const timeOk = r.lostAt <= it.foundAt + 2 * HOUR ? 1 : 0.3;
+      return Math.min(1, (0.65 * dice + 0.25 * cat + 0.1 * loc) * timeOk);
+    }
+    _addAlert(r, it, score, actor) {
+      const key = r.id + "|" + it.id;
+      if (this.alertKeys.has(key)) return null;
+      const a = { id: "A-" + String(++this.seq.alert).padStart(4, "0"), reportId: r.id, itemId: it.id, score, at: this.now(), seen: false };
+      this.alerts.push(a); this.alertKeys.set(key, a.id);
+      this._log(actor, "MATCH_ALERT", it.id, `Possible match with report ${r.id} (${Math.round(score * 100)}%)`);
+      return a;
+    }
+    _matchItemAgainstReports(it, actor) {
+      const cand = new Set();
+      for (const w of it._idx || []) for (const id of this.reportTrie.searchPrefix(w)) cand.add(id);
+      const out = [];
+      for (const id of cand) {
+        const r = this.reports.find((x) => x.id === id);
+        if (!r || r.status !== "OPEN") continue;
+        const sc = this.matchScore(it, r);
+        if (sc >= MATCH_THRESHOLD) { const a = this._addAlert(r, it, sc, { name: "System (smart match)", role: "system" }); if (a) out.push(a); }
+      }
+      return out;
+    }
+    createReport(token, data) {
+      const s = this._need(token, "student");
+      const title = String(data.title || "").trim();
+      if (title.length < 3 || title.length > 60) throw new Error("Give the missing item a short title (3–60 characters).");
+      const description = String(data.description || "").trim().slice(0, 300);
+      if (this._looksSpammy(title) || this._looksSpammy(description)) throw new Error("That entry looks like spam. Please describe the item plainly.");
+      if (!this.categories.has(data.category)) throw new Error("Choose a category.");
+      if (!this.gates.has(data.gate)) throw new Error("Choose where you last had it.");
+      const lostAt = Number(data.lostAt) || this.now();
+      if (lostAt > this.now() + 5 * MIN) throw new Error("The time lost can't be in the future.");
+      const tags = [...new Set(String(data.tags || "").split(/[,;\n]/).map((x) => normalize(x)).filter(Boolean))].slice(0, 8);
+      const r = { id: "R-" + String(++this.seq.report).padStart(4, "0"), ownerId: s.studentId, ownerName: s.name, contact: String(data.contact || "").trim().slice(0, 80), title, description, category: data.category, gate: data.gate, tags, lostAt, status: "OPEN", createdAt: this.now() };
+      this.reports.push(r);
+      this._indexReport(r);
+      this._log(s, "REPORT_FILED", null, `Missing: ${r.title} (${r.id})`);
+      const matches = [];
+      for (const it of this.items.values()) {
+        if (!this._searchable(it)) continue;
+        const sc = this.matchScore(it, r);
+        if (sc >= MATCH_THRESHOLD) { this._addAlert(r, it, sc, s); matches.push({ item: this.publicItem(it), score: sc }); }
+      }
+      this._save();
+      return { report: r, matches: mergeSort(matches, (a, b) => b.score - a.score) };
+    }
+    closeReport(token, id) {
+      const s = this._need(token, "student");
+      const r = this.reports.find((x) => x.id === id && x.ownerId === s.studentId);
+      if (!r) throw new Error("Report not found.");
+      r.status = "CLOSED"; this._unindexReport(r);
+      this._log(s, "REPORT_CLOSED", null, r.id);
+      this._save();
+    }
+    myReports(token) {
+      const s = this._need(token, "student");
+      return this.reports.filter((r) => r.ownerId === s.studentId).slice().reverse().map((r) => ({
+        report: r,
+        alerts: mergeSort(this.alerts.filter((a) => a.reportId === r.id), (a, b) => b.score - a.score).map((a) => ({ alert: a, item: this.publicItem(this.items.get(a.itemId)) })),
+      }));
+    }
+    unseenAlerts(token) {
+      const s = this.session(token);
+      if (!s) return 0;
+      const mine = new Set(this.reports.filter((r) => r.ownerId === s.studentId).map((r) => r.id));
+      return this.alerts.filter((a) => mine.has(a.reportId) && !a.seen).length;
+    }
+    markAlertsSeen(token) {
+      const s = this.session(token);
+      if (!s) return;
+      const mine = new Set(this.reports.filter((r) => r.ownerId === s.studentId).map((r) => r.id));
+      this.alerts.forEach((a) => { if (mine.has(a.reportId)) a.seen = true; });
+      this._save();
+    }
+    myClaims(token) {
+      const s = this._need(token, "student");
+      return this.claims.filter((c) => c.claimantId === s.studentId).slice().reverse().map((c) => ({ claim: c, item: this.publicItem(this.items.get(c.itemId)) }));
+    }
+    myFinds(token) {
+      const s = this._need(token, "student");
+      return this.items.values().filter((it) => it.finderId === s.studentId && it.source === "self-service").sort((a, b) => b.createdAt - a.createdAt).map((it) => ({ ...this.publicItem(it), code: it.code }));
+    }
+
+    /* ===== stats ===== */
+    stats() {
+      const by = {};
+      Object.keys(LABEL).forEach((k) => (by[k] = 0));
+      for (const it of this.items.values()) by[it.status]++;
+      return { byStatus: by, due: this.dueCount(), openClaims: this.claims.filter((c) => c.status === "PENDING").length, openReports: this.reports.filter((r) => r.status === "OPEN").length, alerts: this.alerts.length, total: this.items.size, hash: { size: this.items.size, longestChain: this.items.longestChain(), buckets: this.items.buckets.length }, trieWords: this.trie.wordCount };
+    }
+
+    /* ===== demo data (relative to "now") ===== */
+    seedDemo() {
+      const T = (days, hoursOffset = 0) => this.now() - days * DAY - hoursOffset * HOUR;
+      const sys = this.login("staff", { name: "Front Desk", studentId: "STAFF-01", pin: STAFF_PIN });
+      const add = (d, finderName, finderId) => {
+        const f = this.login("student", { name: finderName, studentId: finderId });
+        const r = this.createFoundItem(f.token, { ...d, tags: d.tags, foundAt: d.foundAt });
+        this.logout(f.token);
+        return r;
+      };
+      const staffAdd = (d) => this.createFoundItem(sys.token, d).item;
+      staffAdd({ title: "Black umbrella", category: "umbrellas", gate: "g-lib", tags: "black, folding", description: "Compact folding umbrella left on a reading table.", foundAt: T(3, 1), secret: "wooden handle, initials MR written on the strap" });
+      staffAdd({ title: "Black umbrella", category: "umbrellas", gate: "g-eng", tags: "black, long", description: "Long umbrella found beside the lockers.", foundAt: T(1, 3), secret: "one broken rib, red tape wrapped around the handle" });
+      staffAdd({ title: "Blue Hydro Flask tumbler", category: "bottles", gate: "g-gym", tags: "blue, steel, 32oz", description: "Insulated tumbler found at the bleachers.", foundAt: T(5), secret: "dent near the bottom, Naruto sticker on the side" });
+      const wallet = staffAdd({ title: "Black wallet", category: "wallets", gate: "g-main", tags: "black, leather", description: "Bifold wallet handed in by a student.", foundAt: T(2, 5), secret: "student ID of a BSIT student, 200 pesos folded, photo of a cat" });
+      staffAdd({ title: "iPhone 13", category: "electronics", gate: "g-lib", tags: "midnight, cracked protector", description: "Phone found on a charging bench, screen locked.", foundAt: T(0, 6), secret: "lock screen photo of a dog, cracked screen protector top left" });
+      staffAdd({ title: "Grey backpack", category: "bags", gate: "g-eng", tags: "grey, nike", description: "Backpack left in the engineering lobby.", foundAt: T(12), secret: "small penguin keychain, yellow notebook and a calculator inside" });
+      staffAdd({ title: "Casio fx-991 calculator", category: "stationery", gate: "g-lib", tags: "scientific, black", description: "Scientific calculator found in a study room.", foundAt: T(35), secret: "initials JD scratched on the back" });
+      staffAdd({ title: "Black-framed eyeglasses", category: "accessories", gate: "g-main", tags: "glasses, black frame", description: "Eyeglasses in a soft case.", foundAt: T(41), secret: "left lens has a small scratch, blue cleaning cloth in the case" });
+      staffAdd({ title: "House keys with red lanyard", category: "keys", gate: "g-gym", tags: "red, lanyard", description: "Three keys on a red lanyard.", foundAt: T(52), secret: "tiny bell attached, one key has green rubber cap" });
+      staffAdd({ title: "Student ID card", category: "ids", gate: "g-main", tags: "id, card", description: "Student ID card, name withheld for privacy.", foundAt: T(18), secret: "name on the card is Maria Santos" });
+      staffAdd({ title: "AirPods case", category: "electronics", gate: "g-lib", tags: "white, earbuds", description: "White earbuds charging case.", foundAt: T(4), secret: "initials AB engraved on the lid" });
+      staffAdd({ title: "Maroon hoodie", category: "clothing", gate: "g-gym", tags: "maroon, hoodie", description: "Pullover hoodie, size M.", foundAt: T(8), secret: "inside tag has the name Reyes in marker" });
+      const rain = staffAdd({ title: "Orange raincoat", category: "clothing", gate: "g-main", tags: "orange, raincoat", description: "Light raincoat.", foundAt: T(70), secret: "" });
+      this.archiveItem(sys.token, rain.id, "donated");
+      add({ title: "White earbuds", category: "electronics", gate: "g-main", tags: "white, wireless", description: "Found near the guard post. Left with the guard.", foundAt: T(0, 2), secret: "tiny black scratch on the right bud" }, "Paolo Dizon", "24-00877");
+      add({ title: "Green tote bag", category: "bags", gate: "g-lib", tags: "green, canvas", description: "Canvas tote with books inside.", foundAt: T(0, 20), secret: "a Hello Kitty keychain" }, "Lara Mendoza", "23-02210");
+      add({ title: "Blue notebook", category: "stationery", gate: "g-eng", tags: "blue, notebook", description: "Spiral notebook.", foundAt: T(3), secret: "name Jose on the first page" }, "Ken Villar", "22-01977");
+      const ana = this.login("student", { name: "Ana Reyes", studentId: "24-00123" });
+      this.submitClaim(ana.token, wallet.id, "folded pesos, a photo of a cat, and my student id", "ana.reyes@school.edu");
+      this.logout(ana.token);
+      const jamie = this.login("student", { name: "Jamie Cruz", studentId: "24-01234" });
+      this.createReport(jamie.token, { title: "Black umbrella with wooden handle", category: "umbrellas", gate: "g-lib", tags: "black, payong", description: "Lost it around the library after class.", lostAt: T(3, 3), contact: "jamie.cruz@school.edu" });
+      this.logout(jamie.token);
+      this.logout(sys.token);
+      this.sweepRetention();
+      this._save();
+    }
+  }
+
+  return { Store, STATUS: S, LABEL, CATEGORIES, GATES, MATCH_THRESHOLD, CLAIM_PASS, DAY, HOUR, MIN, STAFF_PIN };
+});
+
+;
+/* FINDr remote store: the same interface as store.js, backed by Supabase.
+
+   Reads: everything the signed-in user may see (Row Level Security decides) is loaded into the in-browser
+   read model, so search, auto-complete, typo correction, lookalikes, the retention heap and the undo stack
+   keep running on the DSA structures in dsa.js.
+   Writes: every change goes through a server-side function (or an RLS-guarded insert) and the read model is
+   reloaded afterwards. The private "secret detail" and claim matching never leave the database for students.
+
+   Methods that change data are async. store.js methods are synchronous, so callers simply `await` both. */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./store.js"));
+  else root.FindrRemote = factory(root.FindrStore);
+})(typeof self !== "undefined" ? self : this, function (FS) {
+  "use strict";
+  const { Store, STATUS: S, LABEL, CATEGORIES, GATES, MATCH_THRESHOLD } = FS;
+
+  const BUCKET = "item-photos";
+  const pad = (prefix, n) => prefix + "-" + String(n).padStart(4, "0");
+  const dbId = (s) => Number(String(s).slice(2));
+  const ms = (t) => (t ? new Date(t).getTime() : null);
+  const up = (s) => String(s || "").toUpperCase();
+  const uuid = () => (globalThis.crypto && globalThis.crypto.randomUUID ? globalThis.crypto.randomUUID() : "p" + Math.random().toString(36).slice(2) + Date.now().toString(36));
+
+  class RemoteStore extends Store {
+    /* client: a supabase-js client. opts.kv: { get(key), set(key, value) } for per-browser preferences. */
+    constructor(client, opts = {}) {
+      super({ clock: opts.clock, rng: opts.rng, storage: null });
+      this.client = client;
+      this.remote = true;
+      this.loaded = true;
+      this.profile = null;
+      this.notice = null;
+      this.kv = opts.kv || { get: () => null, set: () => {} };
+      const saved = Number(this.kv.get("findr.retention"));
+      if (saved >= 30 && saved <= 60) this.settings.retentionDays = saved;
+    }
+
+    /* ===== plumbing ===== */
+    async _ok(promise) {
+      const { data, error } = await promise;
+      if (error) throw new Error(error.message || String(error));
+      return data;
+    }
+    _rpc(name, args) { return this._ok(this.client.rpc(name, args)); }
+    _seenKey() { return "findr.seen." + (this.profile ? this.profile.userId : "anon"); }
+
+    /* ===== startup and auth ===== */
+    async init() {
+      await this._loadReferenceData();
+      const { data } = await this.client.auth.getSession();
+      await this._adopt(data && data.session);
+      await this.refresh();
+      return this;
+    }
+    async _loadReferenceData() {
+      const [g, c] = await Promise.all([this.client.from("gates").select("id,name"), this.client.from("categories").select("id,label")]);
+      // Mutated in place: the UI and the store both hold references to these arrays.
+      if (g.data && g.data.length) { GATES.length = 0; g.data.forEach((r) => GATES.push([r.id, r.name])); }
+      if (c.data && c.data.length) { CATEGORIES.length = 0; c.data.forEach((r) => CATEGORIES.push([r.id, r.label])); }
+    }
+    async _adopt(session) {
+      if (!session || !session.user) { this.profile = null; return null; }
+      const row = await this._ok(this.client.from("profiles").select("id,name,student_id,role,strikes").eq("id", session.user.id).maybeSingle());
+      if (!row) throw new Error("Your account has no profile yet. Sign out and back in, or ask the administrator to run the latest migration.");
+      this.profile = { token: "sb", userId: row.id, email: session.user.email, name: row.name, studentId: row.student_id, role: row.role === "staff" ? "staff" : "student", strikes: row.strikes || 0, submissions: [] };
+      return this.profile;
+    }
+    async signIn({ email, password } = {}) {
+      email = String(email || "").trim();
+      if (!email || !password) throw new Error("Enter your email and password.");
+      const { data, error } = await this.client.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
+      await this._adopt(data.session);
+      await this.refresh();
+      return this.profile;
+    }
+    async signUp({ email, password, name, studentId } = {}) {
+      email = String(email || "").trim(); name = String(name || "").trim(); studentId = String(studentId || "").trim();
+      if (name.length < 2) throw new Error("Please enter your name.");
+      if (!/^[A-Za-z0-9-]{4,16}$/.test(studentId)) throw new Error("Enter a valid student / employee ID (4–16 letters, digits or dashes).");
+      if (!email) throw new Error("Enter your email.");
+      if (String(password || "").length < 6) throw new Error("Use a password of at least 6 characters.");
+      const { data, error } = await this.client.auth.signUp({ email, password, options: { data: { name, student_id: studentId } } });
+      if (error) throw new Error(error.message);
+      if (!data.session) return { needsConfirmation: true };
+      await this._adopt(data.session);
+      await this.refresh();
+      return { profile: this.profile };
+    }
+    login() { throw new Error("Use signIn() or signUp() with a Supabase account."); }
+    async logout() {
+      await this.client.auth.signOut();
+      this.profile = null;
+      this.history = new (this.history.constructor)(64);
+      while (this.undoStack.size) this.undoStack.pop();
+      await this.refresh();
+    }
+    session(token) { return token && this.profile ? this.profile : null; }
+    clearAll() {}
+    seedDemo() { throw new Error("Demo data lives in supabase/seed_demo.sql for a Supabase backend."); }
+    sweepRetention() { return 0; } // age is computed on the fly; nothing is written back to the database
+
+    /* ===== load the read model ===== */
+    async refresh() {
+      const c = this.client, me = this.profile, staff = !!me && me.role === "staff";
+      const [itemRows, profRows, repRows, claimRows, secretRows, auditRows] = await Promise.all([
+        this._ok(c.from("items").select("*")),
+        this._ok(c.from("profiles").select("id,name,student_id")),
+        me ? this._ok(c.from("reports").select("*")) : [],
+        me ? (staff ? this._ok(c.rpc("staff_claims")) : this._ok(c.from("claims").select("id,item_id,claimant_id,details,contact,status,created_at,decided_at"))) : [],
+        staff ? this._ok(c.from("item_private").select("item_id,secret")) : [],
+        staff ? this._ok(c.from("audit_log").select("*").order("seq", { ascending: false }).limit(500)) : [],
+      ]);
+      const photos = await this._signPhotos(itemRows);
+
+      const keep = { history: this.history, undo: this.undoStack, settings: this.settings };
+      this._reset();
+      this.history = keep.history; this.undoStack = keep.undo; this.settings = keep.settings;
+
+      const people = new Map(profRows.map((p) => [p.id, p]));
+      const secrets = new Map(secretRows.map((r) => [r.item_id, r.secret]));
+      for (const r of itemRows) {
+        if (!this.categories.has(r.category) || !this.gates.has(r.gate)) continue;
+        const fin = people.get(r.finder_id);
+        this._ingestItem({
+          id: pad("I", r.id), _db: r.id, title: r.title, category: r.category, gate: r.gate, tags: r.tags || [], description: r.description || "",
+          foundAt: ms(r.found_at), status: up(r.status), photo: photos.get(r.photo_path) || null, secret: secrets.get(r.id) || "",
+          finderName: fin ? fin.name : "", finderId: fin ? fin.student_id : r.finder_id, finderUid: r.finder_id, source: r.source,
+          createdAt: ms(r.created_at), code: r.code || null, flaggedAt: ms(r.flagged_at), disposition: r.disposition || null,
+        });
+      }
+      this.claims = claimRows.map((r) => (staff ? this._staffClaim(r) : this._ownClaim(r, me)));
+      this.reports = repRows.map((r) => {
+        const o = people.get(r.owner_id);
+        return { id: pad("R", r.id), _db: r.id, ownerUid: r.owner_id, ownerId: o ? o.student_id : r.owner_id, ownerName: o ? o.name : "", contact: r.contact || "", title: r.title, description: r.description || "", category: r.category, gate: r.gate, tags: r.tags || [], lostAt: ms(r.lost_at), status: up(r.status), createdAt: ms(r.created_at) };
+      });
+      for (const r of this.reports) if (r.status === "OPEN") this._indexReport(r);
+      this.audit = auditRows.slice().reverse().map((e) => ({ seq: e.seq, at: ms(e.at), actor: e.actor_name || "System", role: e.role || "", action: e.action, itemId: e.item_id ? pad("I", e.item_id) : null, detail: e.detail || "" }));
+      this._deriveAlerts();
+    }
+    _staffClaim(r) {
+      const score = r.claim_score == null ? null : Number(r.claim_score);
+      return { id: pad("C", r.claim_id), _db: r.claim_id, itemId: pad("I", r.claim_item_id), claimantUid: r.claimant_uid, claimantId: r.claimant_student_id || "", claimantName: r.claimant_name || "", contact: r.claim_contact || "", details: r.claim_details, score, matched: r.claim_matched || [], missed: r.claim_missed || [], manual: score == null, at: ms(r.claim_created_at), status: up(r.claim_status), decidedAt: ms(r.claim_decided_at) };
+    }
+    _ownClaim(r, me) {
+      return { id: pad("C", r.id), _db: r.id, itemId: pad("I", r.item_id), claimantUid: r.claimant_id, claimantId: me.studentId, claimantName: me.name, contact: r.contact || "", details: r.details, score: null, matched: [], missed: [], manual: false, at: ms(r.created_at), status: up(r.status), decidedAt: ms(r.decided_at) };
+    }
+    async _signPhotos(rows) {
+      const map = new Map();
+      const paths = [...new Set(rows.map((r) => r.photo_path).filter(Boolean))].slice(0, 300);
+      if (!paths.length) return map;
+      try {
+        const { data } = await this.client.storage.from(BUCKET).createSignedUrls(paths, 3600);
+        for (const d of data || []) if (d.signedUrl) map.set(d.path, d.signedUrl);
+      } catch (e) { /* photos are optional; the tile fallback is shown */ }
+      return map;
+    }
+
+    /* Smart-match alerts are derived in the browser with the same matcher as before (no alert rows are stored). */
+    _deriveAlerts() {
+      this.alerts = []; this.alertKeys = new (this.alertKeys.constructor)(32);
+      if (!this.profile || this.profile.role === "staff") return;
+      let seen = [];
+      try { seen = JSON.parse(this.kv.get(this._seenKey()) || "[]"); } catch (e) { seen = []; }
+      const seenSet = new Set(seen);
+      for (const r of this.reports) {
+        if (r.status !== "OPEN" || r.ownerUid !== this.profile.userId) continue;
+        for (const it of this.items.values()) {
+          if (!this._searchable(it) || it.finderUid === this.profile.userId) continue;
+          const score = this.matchScore(it, r);
+          if (score < MATCH_THRESHOLD) continue;
+          const id = "A-" + r.id.slice(2) + "-" + it.id.slice(2);
+          this.alerts.push({ id, reportId: r.id, itemId: it.id, score, at: this.now(), seen: seenSet.has(id) });
+          this.alertKeys.set(r.id + "|" + it.id, id);
+        }
+      }
+    }
+    _openReportMatches(it) { return this.reports.filter((r) => r.status === "OPEN" && this._searchable(it) && this.matchScore(it, r) >= MATCH_THRESHOLD).length; }
+    unseenAlerts(token) { return this.session(token) ? this.alerts.filter((a) => !a.seen).length : 0; }
+    markAlertsSeen(token) {
+      if (!this.session(token)) return;
+      this.alerts.forEach((a) => { a.seen = true; });
+      try { this.kv.set(this._seenKey(), JSON.stringify(this.alerts.map((a) => a.id))); } catch (e) { /* storage unavailable */ }
+    }
+
+    /* ===== intake ===== */
+    async _upload(dataUrl, uid) {
+      try {
+        const blob = await (await fetch(dataUrl)).blob();
+        const path = uid + "/" + uuid() + ".jpg";
+        const { error } = await this.client.storage.from(BUCKET).upload(path, blob, { contentType: "image/jpeg", upsert: false });
+        if (error) throw error;
+        return path;
+      } catch (e) {
+        this.notice = "The photo could not be uploaded, so the item was saved without it.";
+        return null;
+      }
+    }
+    async createFoundItem(token, data) {
+      const s = this._need(token);
+      const staff = s.role === "staff";
+      if (!staff && data.website) throw new Error("Submission blocked.");
+      const f = this._fields(data, staff); // same validation and spam filter as the local store; the server enforces limits again
+      const photoPath = data.photo ? await this._upload(data.photo, s.userId) : null;
+      const row = await this._rpc("create_found_item", {
+        p_title: f.title, p_category: f.category, p_gate: f.gate, p_tags: f.tags, p_description: f.description,
+        p_found_at: new Date(f.foundAt).toISOString(), p_secret: String(data.secret || "").trim().slice(0, 300) || null, p_photo_path: photoPath,
+      });
+      await this.refresh();
+      const it = this.items.get(pad("I", row.id));
+      return { item: this.staffItem(it), alerts: staff ? this._openReportMatches(it) : 0 };
+    }
+
+    /* ===== staff: drop-offs ===== */
+    async receiveItem(token, idOrCode, secret) {
+      const s = this._need(token, "staff");
+      const key = String(idOrCode || "").trim().toUpperCase();
+      const known = this.items.get(this.codes.get(key) || idOrCode);
+      if (known && known.status !== S.PENDING) throw new Error(`${known.id} is already ${LABEL[known.status]}.`);
+      const code = known ? known.code : key;
+      const row = await this._rpc("receive_item", { p_code: code, p_secret: secret != null && String(secret).trim() ? String(secret).trim().slice(0, 300) : null });
+      const id = pad("I", row.id);
+      this._hist(id).push({ type: "receive", from: S.PENDING, to: S.UNCLAIMED, at: this.now(), actor: s.name, code });
+      this.undoStack.push(id);
+      await this.refresh();
+      const it = this.items.get(id);
+      return { item: this.staffItem(it), alerts: this._openReportMatches(it) };
+    }
+    async rejectPending(token, id, reason) {
+      const s = this._need(token, "staff");
+      const it = this.items.get(id);
+      if (!it || it.status !== S.PENDING) throw new Error("Only pending items can be rejected.");
+      await this._rpc("reject_pending", { p_item: it._db, p_reason: reason || "spam / never dropped off" });
+      this._hist(id).push({ type: "rejectPending", from: S.PENDING, to: S.ARCHIVED, at: this.now(), actor: s.name, reason: reason || "spam" });
+      this.undoStack.push(id);
+      await this.refresh();
+      return this.staffItem(this.items.get(id));
+    }
+
+    /* ===== claims ===== */
+    async submitClaim(token, itemId, details, contact) {
+      this._need(token, "student");
+      const it = this.items.get(itemId);
+      if (!it) throw new Error("Item not found.");
+      if (it.status !== S.UNCLAIMED) throw new Error(it.status === S.CLAIM_PENDING ? "Someone has already started a claim on this item. Visit the security office if it's yours." : "This item can't be claimed right now.");
+      const r = await this._rpc("submit_claim", { p_item: it._db, p_details: String(details || "").trim(), p_contact: String(contact || "").trim().slice(0, 80) || null });
+      if (!r || !r.ok) return { ok: false, attemptsLeft: r ? r.attemptsLeft : 0, message: "Those details don't match what security has on file. Think about marks, stickers, contents or the lock screen, and try again." };
+      await this.refresh();
+      return { ok: true, claim: this.claims.find((c) => c._db === r.claimId) || null };
+    }
+    async _decide(token, claimId, approve) {
+      const s = this._need(token, "staff");
+      const c = this.claims.find((x) => x.id === claimId && x.status === "PENDING");
+      if (!c) throw new Error("Claim not found or already decided.");
+      await this._rpc("decide_claim", { p_claim: c._db, p_approve: approve });
+      this._hist(c.itemId).push({ type: approve ? "approve" : "rejectClaim", from: S.CLAIM_PENDING, to: approve ? S.CLAIMED : S.UNCLAIMED, at: this.now(), actor: s.name, claimId });
+      this.undoStack.push(c.itemId);
+      await this.refresh();
+      return this.staffItem(this.items.get(c.itemId));
+    }
+    approveClaim(token, claimId) { return this._decide(token, claimId, true); }
+    rejectClaim(token, claimId) { return this._decide(token, claimId, false); }
+
+    /* ===== retention and rollback ===== */
+    setRetention(token, days) {
+      this._need(token, "staff");
+      const d = Math.max(30, Math.min(60, Math.round(Number(days) || 30)));
+      this.settings.retentionDays = d;
+      try { this.kv.set("findr.retention", String(d)); } catch (e) { /* storage unavailable */ }
+      return d;
+    }
+    async archiveItem(token, id, disposition) {
+      const s = this._need(token, "staff");
+      const it = this.items.get(id);
+      if (!it) throw new Error("Item not found.");
+      if (![S.UNCLAIMED, S.CLAIMED, S.PENDING].includes(it.status)) throw new Error(`Cannot move an item from ${LABEL[it.status]} to ${LABEL[S.ARCHIVED]}.`);
+      const d = disposition === "donated" ? "donated" : "archived";
+      const from = it.status;
+      await this._rpc("archive_item", { p_item: it._db, p_disposition: d });
+      this._hist(id).push({ type: "archive", from, to: S.ARCHIVED, at: this.now(), actor: s.name, disposition: d });
+      this.undoStack.push(id);
+      await this.refresh();
+      return this.staffItem(this.items.get(id));
+    }
+    async undo(token) {
+      this._need(token, "staff");
+      const id = this.undoStack.peek();
+      if (!id) throw new Error("Nothing to undo.");
+      const e = this._hist(id).peek();
+      const args = { p_item: dbId(id), p_kind: e.type };
+      if (e.claimId) args.p_claim = dbId(e.claimId);
+      if (e.type === "archive") args.p_to = String(e.from).toLowerCase();
+      if (e.type === "receive") args.p_code = e.code;
+      await this._rpc("staff_rollback", args); // throws (and keeps the stack) if the item has moved on since
+      this.undoStack.pop();
+      this._hist(id).pop();
+      await this.refresh();
+      return this.staffItem(this.items.get(id));
+    }
+
+    /* ===== reports ===== */
+    async createReport(token, data) {
+      const s = this._need(token, "student");
+      const title = String(data.title || "").trim();
+      if (title.length < 3 || title.length > 60) throw new Error("Give the missing item a short title (3–60 characters).");
+      const description = String(data.description || "").trim().slice(0, 300);
+      if (this._looksSpammy(title) || this._looksSpammy(description)) throw new Error("That entry looks like spam. Please describe the item plainly.");
+      if (!this.categories.has(data.category)) throw new Error("Choose a category.");
+      if (!this.gates.has(data.gate)) throw new Error("Choose where you last had it.");
+      const lostAt = Number(data.lostAt) || this.now();
+      if (lostAt > this.now() + 5 * FS.MIN) throw new Error("The time lost can't be in the future.");
+      const tags = [...new Set(String(data.tags || "").split(/[,;\n]/).map((x) => x.trim().toLowerCase()).filter(Boolean))].slice(0, 8);
+      const row = await this._ok(this.client.from("reports").insert({
+        owner_id: s.userId, title, category: data.category, gate: data.gate, tags, description,
+        contact: String(data.contact || "").trim().slice(0, 80) || null, lost_at: new Date(lostAt).toISOString(),
+      }).select("id").single());
+      await this.refresh();
+      const report = this.reports.find((r) => r._db === row.id);
+      const matches = this.items.values().filter((it) => this._searchable(it) && this.matchScore(it, report) >= MATCH_THRESHOLD)
+        .map((it) => ({ item: this.publicItem(it), score: this.matchScore(it, report) })).sort((a, b) => b.score - a.score);
+      return { report, matches };
+    }
+    async closeReport(token, id) {
+      const s = this._need(token, "student");
+      const r = this.reports.find((x) => x.id === id && x.ownerUid === s.userId);
+      if (!r) throw new Error("Report not found.");
+      await this._ok(this.client.from("reports").update({ status: "closed" }).eq("id", r._db));
+      await this.refresh();
+    }
+    myReports(token) {
+      const s = this._need(token, "student");
+      return this.reports.filter((r) => r.ownerUid === s.userId).slice().reverse().map((r) => ({
+        report: r,
+        alerts: this.alerts.filter((a) => a.reportId === r.id).sort((a, b) => b.score - a.score).map((a) => ({ alert: a, item: this.publicItem(this.items.get(a.itemId)) })),
+      }));
+    }
+    myClaims(token) {
+      const s = this._need(token, "student");
+      return this.claims.filter((c) => c.claimantUid === s.userId && this.items.has(c.itemId)).slice().reverse().map((c) => ({ claim: c, item: this.publicItem(this.items.get(c.itemId)) }));
+    }
+    myFinds(token) {
+      const s = this._need(token, "student");
+      return this.items.values().filter((it) => it.finderUid === s.userId && it.source === "self-service").sort((a, b) => b.createdAt - a.createdAt).map((it) => ({ ...this.publicItem(it), code: it.code }));
+    }
+  }
+
+  /* Build a store from { url, key }. createClient comes from the supabase-js bundle (global `supabase`). */
+  function create(config, deps = {}) {
+    const createClient = deps.createClient || (globalThis.supabase && globalThis.supabase.createClient);
+    if (!createClient) throw new Error("The Supabase client library is not loaded.");
+    const client = createClient(config.url, config.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+    return new RemoteStore(client, deps);
+  }
+
+  return { RemoteStore, create };
+});
+
+;
+/* FINDr UI. Renders views as HTML strings from FindrStore and wires delegated events. */
+(function () {
+  "use strict";
+  const FS = globalThis.FindrStore;
+  const { Store, STATUS: S, CATEGORIES, GATES, HOUR, DAY } = FS;
+
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function safeStorage() {
+    try { const k = "__findr_probe"; localStorage.setItem(k, "1"); localStorage.removeItem(k); return localStorage; } catch (e) { return null; }
+  }
+  const ls = safeStorage();
+  const lsGet = (k) => { try { return ls && ls.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { if (ls) { if (v == null) ls.removeItem(k); else ls.setItem(k, v); } } catch (e) {} };
+
+  /* Backend mode: when window.FINDR_CONFIG has a Supabase url + key (injected at build time) the app runs on
+     Supabase (real accounts, shared data). Without it the app runs on browser storage with demo data. */
+  const CFG = (typeof window !== "undefined" && window.FINDR_CONFIG) || null;
+  const REMOTE = !!(CFG && CFG.url && CFG.key && globalThis.FindrRemote);
+  let store;
+  if (REMOTE) {
+    store = globalThis.FindrRemote.create(CFG, { kv: { get: lsGet, set: lsSet } });
+  } else {
+    store = new Store({ storage: ls });
+    if (!store.loaded) store.seedDemo();
+  }
+
+  const VIEWS = ["search", "report", "found", "activity", "desk", "intake", "cleanup", "audit", "lab"];
+  const ui = {
+    view: "search", token: null, modal: null, loginTab: "student",
+    q: "", cat: "", gate: "", since: "", sort: "relevance", algo: "binary", suggest: [], sugIdx: -1,
+    lab: { structures: null, loading: false, trace: null, bench: null, busy: "", err: "", n: 32, target: 22, sizes: "1000,10000,100000" },
+    authMode: "signin", busy: false, loadError: null,
+    photo: null, reportResult: null, foundResult: null, deskGate: "", auditItem: "", auditAction: "", confirmReset: false,
+  };
+  ui.token = REMOTE ? null : lsGet("findr.session");
+  if (!REMOTE && !store.session(ui.token)) ui.token = null;
+
+  const me = () => store.session(ui.token);
+  const isStaff = () => { const s = me(); return !!s && s.role === "staff"; };
+
+  /* ---------- formatting ---------- */
+  const fmtDT = (ms, secs) => new Date(ms).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", second: secs ? "2-digit" : undefined });
+  function ago(ms) {
+    const d = Math.max(0, store.now() - ms);
+    if (d < HOUR) return Math.max(1, Math.round(d / 60000)) + " min ago";
+    if (d < DAY) return Math.round(d / HOUR) + " h ago";
+    return Math.round(d / DAY) + " d ago";
+  }
+  const pad = (n) => String(n).padStart(2, "0");
+  const dtLocal = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const parseLocal = (v) => { const t = v ? new Date(v).getTime() : NaN; return Number.isFinite(t) ? t : store.now(); };
+  const HUES = [205, 160, 38, 280, 350, 100, 220, 20, 262, 182, 60];
+  const hueOf = (cat) => HUES[Math.max(0, CATEGORIES.findIndex((c) => c[0] === cat)) % HUES.length];
+  const BADGE = { PENDING_DROPOFF: "b-wait", UNCLAIMED: "b-ok", CLAIM_PENDING: "b-warn", CLAIMED: "b-done", ARCHIVED: "b-done" };
+  const badge = (status) => `<span class="badge ${BADGE[status]}">${esc(FS.LABEL[status])}</span>`;
+  const ACTION_TEXT = { ITEM_LOGGED: "Item logged", ITEM_VERIFIED: "Drop-off confirmed", PENDING_REJECTED: "Submission rejected", CLAIM_SUBMITTED: "Claim submitted", CLAIM_FAILED: "Claim failed", CLAIM_APPROVED: "Claim approved", CLAIM_REJECTED: "Claim rejected", RETENTION_FLAG: "Flagged for cleanup", RETENTION_SET: "Retention changed", ITEM_ARCHIVED: "Archived", ITEM_DONATED: "Donated", ROLLBACK: "Rollback", MATCH_ALERT: "Match alert", REPORT_FILED: "Report filed", REPORT_CLOSED: "Report closed" };
+  const options = (list, sel, blank) => (blank != null ? `<option value="">${esc(blank)}</option>` : "") + list.map(([v, l]) => `<option value="${esc(v)}"${v === sel ? " selected" : ""}>${esc(l)}</option>`).join("");
+
+  /* ---------- toast ---------- */
+  let toastTimer = null;
+  function toast(msg, err) {
+    const el = $("#toast");
+    if (!el) return;
+    el.textContent = msg;
+    el.className = "show" + (err ? " err" : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = ""; }, 4200);
+  }
+  function formErr(form, msg) {
+    const el = form.querySelector ? form.querySelector(".formerr") : null;
+    if (el) { el.textContent = msg; el.hidden = false; if (el.scrollIntoView) el.scrollIntoView({ block: "nearest" }); } else toast(msg, true);
+  }
+
+  /* ---------- shared pieces ---------- */
+  function tile(it) {
+    if (it.photo) return `<button type="button" class="zoom" data-act="zoomPhoto" data-id="${esc(it.id)}" aria-label="Enlarge photo of ${esc(it.title)}"><img src="${esc(it.photo)}" alt="Photo of ${esc(it.title)}"></button>`;
+    const initial = esc((it.categoryLabel || "?")[0]);
+    return `<span class="tile" style="--h:${hueOf(it.category)}" aria-hidden="true">${initial}</span>`;
+  }
+  function card(it, extra) {
+    const staff = isStaff();
+    let claim = "";
+    if (!staff) {
+      claim = it.status === S.UNCLAIMED
+        ? `<button class="btn primary small" data-act="openClaim" data-id="${esc(it.id)}">This is mine</button>`
+        : `<button class="btn small" disabled>Claim in progress</button>`;
+    }
+    const compare = it.lookalikes > 0 ? `<button class="btn small" data-act="compare" data-id="${esc(it.id)}">Compare ${it.lookalikes} similar</button>` : "";
+    return `<article class="ticket">
+      <div class="stub">${tile(it)}<span class="tid">${esc(it.id)}</span></div>
+      <div class="tbody">
+        <div class="rowtop"><h3>${esc(it.title)}</h3>${badge(it.status)}</div>
+        ${extra ? `<div class="score">${extra}</div>` : ""}
+        <dl class="facts">
+          <div><dt>Found</dt><dd>${esc(fmtDT(it.foundAt))} <span class="muted">(${ago(it.foundAt)})</span></dd></div>
+          <div><dt>Where</dt><dd><span class="loc">${esc(it.gateName)}</span></dd></div>
+        </dl>
+        ${it.description ? `<p class="desc">${esc(it.description)}</p>` : ""}
+        ${it.tags.length ? `<div class="tags">${it.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
+        <div class="actions">${claim}${compare}<button class="btn ghost small" data-act="share" data-id="${esc(it.id)}">Copy post text</button></div>
+      </div></article>`;
+  }
+  function gateCard(text, staffOnly) {
+    return `<div class="panel empty"><h3>${esc(text)}</h3>
+      <button class="btn primary" data-act="signin" data-v="${staffOnly ? "staff" : "student"}">Sign in${staffOnly ? " as staff" : ""}</button></div>`;
+  }
+
+  /* ---------- header ---------- */
+  function headerHTML() {
+    const s = me();
+    const items = [["search", "Search"]];
+    let badges = {};
+    if (s && s.role === "staff") {
+      items.push(["desk", "Front desk"], ["intake", "Log an item"], ["cleanup", "Cleanup"], ["audit", "Audit log"]);
+      badges = { desk: store.pendingQueue().length + store.claimQueue().length, cleanup: store.dueCount() };
+    } else {
+      items.push(["report", "Report missing"], ["found", "I found something"]);
+      if (s) { items.push(["activity", "My activity"]); badges = { activity: store.unseenAlerts(ui.token) }; }
+    }
+    items.push(["lab", "DSA Lab"]);
+    const nav = items.map(([v, l]) => `<button class="navbtn" data-act="go" data-v="${v}"${ui.view === v ? ' aria-current="page"' : ""}>${l}${badges[v] ? `<span class="count">${badges[v]}</span>` : ""}</button>`).join("");
+    const who = s
+      ? `<span><b>${esc(s.name)}</b> <span class="muted">${s.role === "staff" ? "Security staff" : "Student / employee"}</span></span><button class="btn small" data-act="signout">Sign out</button>`
+      : `<button class="btn primary small" data-act="signin" data-v="student">Sign in</button>`;
+    return `<div class="bar-in">
+      <button class="brand" data-act="go" data-v="search" aria-label="FINDr home"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 12 12 3h8a1 1 0 0 1 1 1v8l-9 9a1.5 1.5 0 0 1-2 0L3 14a1.5 1.5 0 0 1 0-2Z" fill="currentColor"/><circle cx="16.5" cy="7.5" r="2" fill="var(--bg)"/></svg><span class="wm">FIND<b>r</b></span></button>
+      <nav class="main" aria-label="Main">${nav}</nav><div class="who">${who}</div></div>`;
+  }
+  function renderHeader() { const h = $("#hdr"); if (h) h.innerHTML = headerHTML(); }
+
+  /* ---------- search view ---------- */
+  function runSearch() {
+    const hrs = Number(ui.since);
+    return store.search({ q: ui.q, category: ui.cat, gate: ui.gate, from: hrs ? store.now() - hrs * HOUR : null, sort: ui.sort });
+  }
+
+  /* ---------- Python DSA engine bridge ----------
+     With Supabase on, every search and autocomplete is answered by the Python server (backend/server.py), which runs
+     the searching algorithms in backend/findr_dsa. If the server is not reachable the page falls back to the local
+     JavaScript search, so the site never breaks. */
+  const PY = { ok: false, base: (CFG && CFG.api) || "", requested: null, last: null };
+  const jsId = (n) => "I-" + String(n).padStart(4, "0");
+  async function pyGet(path) {
+    const r = await fetch(PY.base + path);
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Python server error");
+    return j;
+  }
+  function pyProbe() {
+    if (typeof fetch !== "function") return;
+    pyGet("/api/health").then((h) => { PY.ok = !!h.ok; if (ui.view === "search" || ui.view === "lab") render(); else renderHeader(); }, () => { PY.ok = false; });
+  }
+  const searchKey = () => JSON.stringify([ui.q.trim(), ui.cat, ui.gate, ui.since, ui.sort, ui.algo]);
+  function engineSearch() {
+    const local = runSearch();
+    if (!(REMOTE && PY.ok)) return local;
+    const key = searchKey();
+    if (PY.last && PY.last.key === key) {
+      const d = PY.last.data;
+      const results = d.ids.map((id) => { const it = store.getItem(jsId(id), false); return it ? { item: it, score: d.scores[id] } : null; }).filter(Boolean);
+      return { results, didYouMean: d.did_you_mean, total: results.length, metrics: d.metrics };
+    }
+    if (PY.requested !== key) {
+      PY.requested = key;
+      const hrs = Number(ui.since);
+      const qs = new URLSearchParams({ q: ui.q, category: ui.cat, gate: ui.gate, sort: ui.sort, algo: ui.algo });
+      if (hrs) qs.set("from", String(store.now() - hrs * HOUR));
+      pyGet("/api/search?" + qs).then((data) => { PY.last = { key, data }; if (ui.view === "search" && searchKey() === key) refreshSearch(); }, () => {});
+    }
+    return local;
+  }
+  function engineBadge(r) {
+    if (r.metrics) {
+      const m = r.metrics;
+      return `<p class="engine mono" title="Answered by the Python server using the DSA in backend/findr_dsa">Python engine · ${esc(m.algorithm)} search · ${m.window_comparisons} window comparisons · ${m.ms} ms · ${m.indexed} items indexed · <button class="btn ghost small" data-act="go" data-v="lab">see how</button></p>`;
+    }
+    return `<p class="engine muted">${REMOTE ? "Python engine offline: showing JavaScript fallback results. Start it with <span class=\"mono\">python backend/server.py</span>." : "Browser demo: searched in JavaScript."}</p>`;
+  }
+  function chipsHTML() {
+    const cats = store.categories.values().filter((c) => c.count > 0 || c.id === ui.cat);
+    const total = store.categories.values().reduce((n, c) => n + c.count, 0);
+    const mk = (id, label, n) => `<button class="chip" data-act="pickCat" data-v="${esc(id)}" aria-pressed="${ui.cat === id}">${esc(label)} <span class="muted">${n}</span></button>`;
+    return mk("", "All", total) + CATEGORIES.map(([id]) => cats.find((c) => c.id === id)).filter(Boolean).map((c) => mk(c.id, c.label, c.count)).join("");
+  }
+  function resultsHTML() {
+    const r = engineSearch();
+    let head = `<p class="muted" aria-live="polite">${r.total} item${r.total === 1 ? "" : "s"} held by security${ui.q.trim() ? ` for “${esc(ui.q.trim())}”` : ""}</p>${engineBadge(r)}`;
+    if (r.didYouMean) head += `<p>No exact match. Showing results for <button class="btn ghost small" data-act="pickAgain" data-v="${esc(r.didYouMean)}">${esc(r.didYouMean)}</button></p>`;
+    if (!r.total) {
+      return head + `<div class="panel empty"><h3>Nothing matches yet</h3>
+        <p class="muted">Items appear here once security confirms them. Tell us what you lost and we will alert you when a match comes in.</p>
+        <div class="actions"><button class="btn primary" data-act="go" data-v="report">Report it missing</button><button class="btn" data-act="clearFilters">Clear filters</button></div></div>`;
+    }
+    return head + `<div class="results">${r.results.map((x) => card(x.item)).join("")}</div>`;
+  }
+  function suggestHTML() {
+    if (!ui.suggest.length) return "";
+    return ui.suggest.map((s, i) => `<li role="option" id="sg${i}" data-act="pickSuggest" data-v="${esc(s)}" aria-selected="${i === ui.sugIdx}">${esc(s)}</li>`).join("");
+  }
+  function searchView() {
+    const since = [["24", "Last 24 hours"], ["72", "Last 3 days"], ["168", "Last 7 days"], ["720", "Last 30 days"]];
+    return `<section class="head"><h1>Lost something on campus?</h1>
+      <p class="muted">Everything listed here is physically at a security desk. Search by what it is: “umbrella”, “payong”, “wallet”.</p></section>
+      <section class="sect">
+        <div class="searchbox">
+          <label class="sr-only" for="q">Search lost items</label>
+          <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Start typing, e.g. umb…" value="${esc(ui.q)}" role="combobox" aria-expanded="${ui.suggest.length > 0}" aria-controls="suggest" aria-autocomplete="list">
+          <ul id="suggest" class="suggest" role="listbox"${ui.suggest.length ? "" : " hidden"}>${suggestHTML()}</ul>
+        </div>
+        <div class="chips" id="chips">${chipsHTML()}</div>
+        <div class="filters">
+          <div class="field"><label for="f-gate">Location</label><select id="f-gate" data-set="gate">${options(GATES, ui.gate, "Any gate")}</select></div>
+          <div class="field"><label for="f-since">Found</label><select id="f-since" data-set="since">${options(since, ui.since, "Any time")}</select></div>
+          <div class="field"><label for="f-sort">Sort by</label><select id="f-sort" data-set="sort">${options([["relevance", "Best match"], ["newest", "Newest first"], ["oldest", "Oldest first"]], ui.sort)}</select></div>
+          ${REMOTE && PY.ok ? `<div class="field"><label for="f-algo">Date filter algorithm</label><select id="f-algo" data-set="algo">${options([["binary", "Binary search"], ["linear", "Linear search"]], ui.algo)}</select></div>` : ""}
+        </div>
+      </section>
+      <section class="sect" id="results">${resultsHTML()}</section>`;
+  }
+  function refreshSearch() {
+    const r = $("#results"), c = $("#chips"), sg = $("#suggest"), q = $("#q");
+    if (r) r.innerHTML = resultsHTML();
+    if (c) c.innerHTML = chipsHTML();
+    if (sg) { sg.innerHTML = suggestHTML(); sg.hidden = !ui.suggest.length; }
+    if (q) q.setAttribute("aria-expanded", String(ui.suggest.length > 0));
+  }
+  function updateSuggest() {
+    const raw = ui.q;
+    ui.suggest = raw.trim() ? store.suggest(raw).filter((s) => s !== raw.trim().toLowerCase()) : [];
+    ui.sugIdx = -1;
+    if (REMOTE && PY.ok && raw.trim()) {
+      pyGet("/api/suggest?q=" + encodeURIComponent(raw)).then((d) => {
+        if (ui.q !== raw) return; // the user kept typing; this answer is stale
+        ui.suggest = d.suggestions.filter((s) => s !== raw.trim().toLowerCase());
+        ui.sugIdx = -1;
+        refreshSearch();
+      }, () => {});
+    }
+  }
+
+  /* ---------- DSA Lab (Python engine on display) ---------- */
+  function labLoad() {
+    const L = ui.lab;
+    if (L.structures || L.loading) return;
+    L.loading = true;
+    pyGet("/api/lab/structures").then((s) => { L.structures = s; L.loading = false; if (ui.view === "lab") render(); }, (e) => { L.loading = false; L.err = e.message; });
+  }
+  const cellClass = (L, name, i) => {
+    const res = L.trace.results[name];
+    if (res.found && res.index === i) return "lab-cell hit found";
+    return res.steps.some((s) => s.index === i || s.mid === i || s.jump_to === i) ? "lab-cell hit" : "lab-cell";
+  };
+  function traceHTML(L) {
+    const t = L.trace;
+    if (!t) return `<p class="muted">Pick a list size and a number to look for, then run. Every algorithm gets the same sorted list.</p>`;
+    const cols = ["linear", "binary", "jump"].map((name) => {
+      const r = t.results[name];
+      const cells = t.array.map((v, i) => `<span class="${cellClass(L, name, i)}" title="index ${i}: ${v}">${t.array.length <= 64 ? v : ""}</span>`).join("");
+      return `<div class="panel stack labcol"><h3>${name[0].toUpperCase() + name.slice(1)} search</h3>
+        <p class="mono"><b>${r.comparisons}</b> comparisons · ${r.found ? `found at index ${r.index}` : "not in the list"}</p>
+        <div class="lab-cells" aria-label="${name} search visited cells">${cells}</div>
+        <p class="muted small">${r.steps.length >= 64 ? "First 64 steps shown. " : ""}Highlighted cells are the ones this algorithm had to look at.</p></div>`;
+    }).join("");
+    return `<div class="labgrid">${cols}</div>`;
+  }
+  function benchHTML(L) {
+    const b = L.bench;
+    if (!b) return `<p class="muted">Runs all three algorithms on lists of growing size and reports exact comparison counts plus measured time.</p>`;
+    const max = Math.max(...b.rows.map((r) => Math.max(r.linear.comparisons, r.binary.comparisons, r.jump.comparisons)));
+    const bar = (v, cls) => `<span class="bar ${cls}" style="width:${Math.max(2, (Math.log10(v + 1) / Math.log10(max + 1)) * 100).toFixed(1)}%"><i>${v}</i></span>`;
+    const avg = b.rows.filter((r) => r.case === "average");
+    return `<div class="panel tight"><div class="tablewrap"><table><thead><tr><th class="num">n</th><th>Case</th><th class="num">Linear comps</th><th class="num">Binary comps</th><th class="num">Jump comps</th><th class="num">Linear time</th><th class="num">Binary time</th><th class="num">Jump time</th></tr></thead><tbody>
+      ${b.rows.map((r) => `<tr><td class="num">${r.n.toLocaleString()}</td><td>${r.case}</td><td class="num">${r.linear.comparisons}</td><td class="num">${r.binary.comparisons}</td><td class="num">${r.jump.comparisons}</td><td class="num">${r.linear.us}</td><td class="num">${r.binary.us}</td><td class="num">${r.jump.us}</td></tr>`).join("")}
+      </tbody></table></div></div>
+      <div class="panel stack"><h3>Average case: comparisons per search <span class="muted">(log scale)</span></h3>
+        ${avg.map((r) => `<div class="barrow"><span class="mono barlbl">n = ${r.n.toLocaleString()}</span><div class="bars">${bar(r.linear.comparisons, "b-lin")}${bar(r.jump.comparisons, "b-jmp")}${bar(r.binary.comparisons, "b-bin")}</div></div>`).join("")}
+        <p class="muted small"><span class="key b-lin"></span>Linear <span class="key b-jmp"></span>Jump <span class="key b-bin"></span>Binary. Comparisons are exact and machine independent. The time columns in the table are average microseconds per search and vary by computer.</p></div>`;
+  }
+  function labView() {
+    const head = `<section class="head"><h1>DSA Lab</h1><p class="muted">FINDr's search runs on Python data structures and algorithms. Try them here, on the same engine that answers the Search page.</p></section>`;
+    if (!PY.ok) {
+      return head + `<div class="panel stack"><h3>Python engine not connected</h3><p class="muted">The lab talks to the Python server. Start it from the project folder, then reload this page:</p>
+        <p class="mono">python backend/server.py --demo</p><div class="actions"><button class="btn primary" data-act="labRetry">Check again</button></div></div>`;
+    }
+    labLoad();
+    const L = ui.lab;
+    const table = L.structures ? `<div class="panel tight"><div class="tablewrap"><table><thead><tr><th>Name</th><th>Type</th><th>What it does in FINDr</th><th>Time</th><th>Space</th></tr></thead><tbody>
+      ${L.structures.map((s) => `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.kind)}</td><td>${esc(s.where)}</td><td class="mono">${esc(s.time)}</td><td class="mono">${esc(s.space)}</td></tr>`).join("")}</tbody></table></div></div>` : `<p class="muted">${esc(L.err) || "Loading…"}</p>`;
+    return head + `
+      <section class="sect"><header><h2>1. Watch the searches</h2></header>
+        <form class="filters" data-form="labTrace">
+          <div class="field"><label for="lab-n">List size (1 to 200)</label><input id="lab-n" name="n" type="number" min="1" max="200" value="${esc(L.n)}"></div>
+          <div class="field"><label for="lab-t">Number to find (list holds even numbers 0, 2, 4…)</label><input id="lab-t" name="target" type="number" value="${esc(L.target)}"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn primary" type="submit"${L.busy === "trace" ? " disabled" : ""}>Run all three</button></div>
+        </form>
+        <div class="formerr" role="alert"${L.err && L.busy === "" ? "" : " hidden"}>${esc(L.err)}</div>
+        ${traceHTML(L)}</section>
+      <section class="sect"><header><h2>2. Compare their speed</h2></header>
+        <form class="filters" data-form="labBench">
+          <div class="field"><label for="lab-s">List sizes (comma separated, up to 200000)</label><input id="lab-s" name="sizes" type="text" value="${esc(L.sizes)}"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn primary" type="submit"${L.busy === "bench" ? " disabled" : ""}>${L.busy === "bench" ? "Running…" : "Run benchmark"}</button></div>
+        </form>
+        ${benchHTML(L)}
+        <div class="panel stack"><h3>Which one does FINDr use?</h3>
+          <p>Binary search. The item list is kept sorted (merge sort, O(n log n) each time the list loads), so every lookup afterwards costs O(log n) instead of O(n).</p>
+          <p class="muted">Limits: binary and jump search need sorted data. Linear search wins when the target is the very first element, and for very small lists the difference is not worth the sorting step. A hash table would find an exact id in O(1), but it cannot answer “everything found between Monday and Wednesday”; sorted arrays can.</p></div></section>
+      <section class="sect"><header><h2>3. Everything in the engine</h2></header>${table}</section>`;
+  }
+
+  /* ---------- report missing ---------- */
+  function reportView() {
+    if (isStaff()) return `<section class="head"><h1>Report a missing item</h1><p class="muted">Missing-item reports are filed by students and employees so the system can alert the owner. Use “Log an item” to record something handed to security.</p></section>`;
+    if (!me()) return `<section class="head"><h1>Report a missing item</h1><p class="muted">We compare your report against every item security confirms, and alert you the moment one looks like yours.</p></section>${gateCard("Sign in to file a report")}`;
+    if (ui.reportResult) {
+      const { report, matches } = ui.reportResult;
+      return `<section class="head"><h1>Report filed</h1><p class="muted">${esc(report.title)} · ${esc(report.id)}</p></section>
+        ${matches.length
+          ? `<section class="sect"><header><h2>${matches.length} possible match${matches.length === 1 ? "" : "es"} right now</h2></header><div class="results">${matches.map((m) => card(m.item, `Possible match ${Math.round(m.score * 100)}%`)).join("")}</div></section>`
+          : `<div class="panel stack"><h2>No match yet</h2><p class="muted">When security confirms an item that fits your description, an alert will appear under My activity.</p></div>`}
+        <div class="actions"><button class="btn" data-act="reportAgain">File another report</button><button class="btn primary" data-act="go" data-v="activity">Go to My activity</button></div>`;
+    }
+    return `<section class="head"><h1>Report a missing item</h1>
+      <p class="muted">Describe it the way you would to a friend. We match it against every item security confirms, now and later, and alert you.</p></section>
+      <form class="panel stack" data-form="report" id="report-form">
+        <div class="grid2">
+          <div class="field"><label for="r-title">What did you lose?</label><input id="r-title" name="title" type="text" maxlength="60" placeholder="Black umbrella with a wooden handle" required></div>
+          <div class="field"><label for="r-cat">Category</label><select id="r-cat" name="category" required>${options(CATEGORIES, "", "Choose one")}</select></div>
+          <div class="field"><label for="r-gate">Where did you last have it?</label><select id="r-gate" name="gate" required>${options(GATES, "", "Choose a location")}</select></div>
+          <div class="field"><label for="r-when">About when?</label><input id="r-when" name="lostAt" type="datetime-local" value="${dtLocal(store.now())}"></div>
+          <div class="field"><label for="r-tags">Colors, brand, keywords</label><input id="r-tags" name="tags" type="text" placeholder="black, folding, payong"><span class="help">Separate with commas.</span></div>
+          <div class="field"><label for="r-contact">How should we reach you?</label><input id="r-contact" name="contact" type="text" placeholder="Email or phone"></div>
+        </div>
+        <div class="field"><label for="r-desc">Anything else?</label><textarea id="r-desc" name="description" maxlength="300" placeholder="Where you sat, what was inside, when you noticed it was gone"></textarea></div>
+        <div class="formerr" role="alert" hidden></div>
+        <div><button class="btn primary" type="submit">File report</button></div>
+      </form>`;
+  }
+
+  /* ---------- found + staff intake (same form) ---------- */
+  function foundView(staff) {
+    if (!me()) return `<section class="head"><h1>I found something</h1><p class="muted">Log it here, then hand it to the guard at the gate. The guard only has to confirm a drop-off code.</p></section>${gateCard("Sign in to log a found item")}`;
+    if (ui.foundResult) {
+      const { item, alerts } = ui.foundResult;
+      const body = staff
+        ? `<div class="panel stack"><h2>${esc(item.title)} is now unclaimed</h2><p class="muted">Logged as ${esc(item.id)} at ${esc(item.gateName)}.${alerts ? ` It matched ${alerts} open report${alerts === 1 ? "" : "s"}, and the owner${alerts === 1 ? " was" : "s were"} alerted.` : ""}${item.secret ? "" : " No private detail is on file, so claims will need a manual check."}</p></div>`
+        : `<div class="panel stack"><h2>Hand it to the guard at ${esc(item.gateName)}</h2>
+            <p class="muted">Show this code. Your item stays hidden from searches until security confirms they hold it.</p>
+            <div><span class="code">${esc(item.code)}</span></div>
+            <p class="help">You can find this code again under My activity.</p></div>`;
+      return `<section class="head"><h1>${staff ? "Item logged" : "Thanks for turning it in"}</h1></section>${body}
+        <div class="actions"><button class="btn primary" data-act="foundAgain">${staff ? "Log another item" : "Report another item"}</button><button class="btn" data-act="go" data-v="${staff ? "desk" : "search"}">${staff ? "Back to front desk" : "Back to search"}</button></div>`;
+    }
+    return `<section class="head"><h1>${staff ? "Log a received item" : "I found something"}</h1>
+      <p class="muted">${staff ? "Items logged here go straight to Unclaimed. Add a private detail so owners can be verified." : "Takes about a minute on a phone. Then drop the item at the gate. The guard only confirms your code."}</p></section>
+      <form class="panel stack" data-form="found" data-staff="${staff ? 1 : 0}" id="found-form">
+        <div class="grid2">
+          <div class="field"><label for="f-title">What is it?</label><input id="f-title" name="title" type="text" maxlength="60" placeholder="Blue water bottle" required></div>
+          <div class="field"><label for="f-cat">Category</label><select id="f-cat" name="category" required>${options(CATEGORIES, "", "Choose one")}</select></div>
+          <div class="field"><label for="f-gate2">${staff ? "Location tag" : "Found near · drop-off gate"}</label><select id="f-gate2" name="gate" required>${options(GATES, "", "Choose a gate")}</select></div>
+          <div class="field"><label for="f-when">When did you find it?</label><input id="f-when" name="foundAt" type="datetime-local" value="${dtLocal(store.now())}"></div>
+          <div class="field"><label for="f-tags">Colors, brand, keywords</label><input id="f-tags" name="tags" type="text" placeholder="blue, steel, 32oz"><span class="help">Separate with commas. These make it searchable.</span></div>
+          <div class="field"><label for="photo">Photo</label><input id="photo" type="file" accept="image/*" capture="environment"><span class="help">Keep stickers, scratches and screens out of the shot.</span></div>
+        </div>
+        <div id="photoPrev"></div>
+        <div class="field"><label for="f-desc">Public description</label><textarea id="f-desc" name="description" maxlength="300" placeholder="Where exactly you found it. Anyone searching can read this."></textarea></div>
+        <div class="field"><label for="f-secret">Private detail (hidden from searchers)</label><textarea id="f-secret" name="secret" maxlength="300" placeholder="Something only the owner would know: a sticker, a scratch, what is inside, the lock screen photo"></textarea><span class="help">Owners must describe this before they can claim the item.</span></div>
+        <div class="hp" aria-hidden="true"><label for="f-web">Website</label><input id="f-web" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+        <div class="formerr" role="alert" hidden></div>
+        <div><button class="btn primary" type="submit">${staff ? "Log item" : "Get my drop-off code"}</button></div>
+      </form>`;
+  }
+
+  /* ---------- student activity ---------- */
+  function activityView() {
+    if (!me()) return `<section class="head"><h1>My activity</h1></section>${gateCard("Sign in to see your reports and claims")}`;
+    const reps = store.myReports(ui.token), claims = store.myClaims(ui.token), finds = store.myFinds(ui.token);
+    const CL = { PENDING: ["b-warn", "Waiting for staff review"], APPROVED: ["b-ok", "Approved"], REJECTED: ["b-bad", "Not approved"], CANCELLED: ["b-done", "Cancelled"] };
+    return `<section class="head"><h1>My activity</h1><p class="muted">Signed in as ${esc(me().name)} (${esc(me().studentId)}).</p></section>
+      <section class="sect"><header><h2>Missing-item reports</h2><button class="btn small" data-act="go" data-v="report">New report</button></header>
+        ${reps.length ? reps.map(({ report: r, alerts }) => `<div class="panel stack">
+          <div class="rowtop"><div><h3>${esc(r.title)}</h3><p class="muted">${esc(r.id)} · lost ${esc(fmtDT(r.lostAt))} · ${esc(store.gates.get(r.gate).name)}</p></div>${r.status === "OPEN" ? `<span class="badge b-wait">Watching</span>` : `<span class="badge b-done">Closed</span>`}</div>
+          ${alerts.length ? `<div class="results">${alerts.map((a) => card(a.item, `Possible match ${Math.round(a.alert.score * 100)}%`)).join("")}</div>` : `<p class="muted">No match yet. You will see an alert here when a matching item is confirmed.</p>`}
+          ${r.status === "OPEN" ? `<div><button class="btn small" data-act="closeReport" data-id="${esc(r.id)}">I found it, close this report</button></div>` : ""}
+        </div>`).join("") : `<div class="panel muted">You have not reported anything missing.</div>`}</section>
+      <section class="sect"><header><h2>My claims</h2></header>
+        ${claims.length ? `<div class="panel tight"><ul class="rows">${claims.map(({ claim: c, item }) => `<li><div class="main"><b>${esc(item.title)}</b><span class="muted">${esc(c.id)} · ${esc(fmtDT(c.at))}</span>${c.status === "APPROVED" ? `<span>Bring your ID to the ${esc(item.gateName)}.</span>` : ""}</div><span class="badge ${CL[c.status][0]}">${CL[c.status][1]}</span></li>`).join("")}</ul></div>` : `<div class="panel muted">No claims yet. Find your item in Search and choose “This is mine”.</div>`}</section>
+      <section class="sect"><header><h2>Items I turned in</h2></header>
+        ${finds.length ? `<div class="panel tight"><ul class="rows">${finds.map((f) => `<li><div class="main"><b>${esc(f.title)}</b><span class="muted">${esc(f.id)} · ${esc(f.gateName)}</span>${f.status === S.PENDING ? `<span>Show code <span class="code small">${esc(f.code)}</span> to the guard.</span>` : ""}</div>${badge(f.status)}</li>`).join("")}</ul></div>` : `<div class="panel muted">Nothing turned in yet.</div>`}</section>`;
+  }
+
+  /* ---------- staff: front desk ---------- */
+  function deskView() {
+    if (!isStaff()) return `<section class="head"><h1>Front desk</h1></section>${gateCard("Staff sign-in required", true)}`;
+    const st = store.stats(), pend = store.pendingQueue(ui.deskGate), claims = store.claimQueue(), up = store.undoPeek();
+    const upItem = up ? store.getItem(up.itemId) : null;
+    return `<section class="head"><h1>Front desk</h1>
+      <div class="strip"><span><b>${st.byStatus.PENDING_DROPOFF}</b>awaiting drop-off</span><span><b>${st.openClaims}</b>claims to review</span><span><b>${st.byStatus.UNCLAIMED}</b>unclaimed</span><span><b>${st.due}</b>past retention</span></div></section>
+      ${up ? `<div class="callout"><span>Last change: <b>${esc(upItem.title)}</b> (${esc(upItem.id)}) moved to ${esc(FS.LABEL[up.to])}.</span><button class="btn small" data-act="undo">Undo</button></div>` : ""}
+      <section class="sect"><header><h2>Confirm a drop-off</h2><span class="muted">One step: type the code the student shows you.</span></header>
+        <form class="panel" data-form="receiveCode" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+          <div class="field" style="flex:1 1 200px"><label for="code">Drop-off code</label><input id="code" name="code" type="text" autocomplete="off" autocapitalize="characters" maxlength="5" placeholder="K7M2Q" class="mono"></div>
+          <button class="btn primary" type="submit">Mark received</button></form></section>
+      <section class="sect"><header><h2>Waiting for drop-off</h2>
+        <div class="field" style="min-width:200px"><label class="sr-only" for="dg">Gate</label><select id="dg" data-set="deskGate">${options(GATES, ui.deskGate, "All gates")}</select></div></header>
+        ${pend.length ? `<div class="panel tight"><ul class="rows">${pend.map((p) => `<li><div class="main"><span><b>${esc(p.title)}</b> <span class="muted">${esc(p.id)}</span> ${p.stale ? `<span class="badge b-warn">No drop-off after 48 h</span>` : ""}</span>
+          <span class="muted">${esc(p.finderName)} (${esc(p.finderId)}) · ${esc(p.gateName)} · logged ${ago(p.createdAt)}</span>
+          <span>Code <span class="code small">${esc(p.code)}</span></span>
+          ${p.secret ? "" : `<input class="inline" id="sec-${esc(p.id)}" type="text" placeholder="Private detail (optional)" aria-label="Private detail for ${esc(p.title)}">`}</div>
+          <div class="btns"><button class="btn primary small" data-act="receive" data-id="${esc(p.id)}">Received</button><button class="btn danger small" data-act="rejectPending" data-id="${esc(p.id)}">Reject as spam</button></div></li>`).join("")}</ul></div>` : `<div class="panel muted">Nothing is waiting at ${ui.deskGate ? esc(store.gates.get(ui.deskGate).name) : "any gate"}.</div>`}</section>
+      <section class="sect"><header><h2>Claims to review</h2><span class="muted">Check the claimant's ID at the counter before releasing.</span></header>
+        ${claims.length ? `<div class="panel tight"><ul class="rows">${claims.map(({ claim: c, item }) => `<li><div class="main">
+          <span><b>${esc(item.title)}</b> <span class="muted">${esc(item.id)} · ${esc(item.gateName)} · found ${esc(fmtDT(item.foundAt))}</span></span>
+          <span><span class="muted">On file:</span> ${item.secret ? esc(item.secret) : `<span class="badge b-warn">No private detail on file, check by hand</span>`}</span>
+          <span><span class="muted">${esc(c.claimantName)} (${esc(c.claimantId)}) says:</span> “${esc(c.details)}”</span>
+          ${c.manual ? "" : `<span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="meter${c.score < 0.7 ? "" : ""}" style="width:140px"><i style="width:${Math.round(c.score * 100)}%"></i></span><b>${Math.round(c.score * 100)}% match</b>
+            ${c.matched.map((t) => `<span class="badge b-ok">${esc(t)}</span>`).join("")}${c.missed.map((t) => `<span class="badge b-bad">${esc(t)}</span>`).join("")}</span>`}
+          </div><div class="btns"><button class="btn primary small" data-act="approve" data-id="${esc(c.id)}">Approve and release</button><button class="btn danger small" data-act="rejectClaim" data-id="${esc(c.id)}">Reject</button></div></li>`).join("")}</ul></div>` : `<div class="panel muted">No claims waiting.</div>`}</section>`;
+  }
+
+  /* ---------- staff: retention cleanup ---------- */
+  function cleanupView() {
+    if (!isStaff()) return `<section class="head"><h1>Cleanup</h1></section>${gateCard("Staff sign-in required", true)}`;
+    const lim = store.settings.retentionDays, q = store.retentionQueue(60), due = q.filter((r) => r.due).length;
+    return `<section class="head"><h1>Cleanup</h1><p class="muted">Unclaimed items ranked oldest first. Anything past the retention limit is flagged for archiving or donation.</p></section>
+      <div class="panel stack">
+        <div class="field"><label for="ret">Retention limit: <b id="retv">${lim} days</b></label><input id="ret" type="range" min="30" max="60" step="1" value="${lim}" data-change="retention"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span><b>${due}</b> of ${q.length} unclaimed items are past the limit.</span>
+        <span class="actions"><button class="btn small" data-act="processOldest" data-d="archived"${due ? "" : " disabled"}>Archive the oldest</button><button class="btn small" data-act="processOldest" data-d="donated"${due ? "" : " disabled"}>Donate the oldest</button></span></div></div>
+      <section class="sect">${q.length ? `<div class="panel tight"><ul class="rows">${q.map((r, i) => {
+        const it = r.item, pct = Math.min(100, Math.round((r.ageDays / lim) * 100));
+        return `<li><div class="main"><span><span class="muted">#${i + 1}</span> <b>${esc(it.title)}</b> <span class="muted">${esc(it.id)} · ${esc(it.gateName)}</span></span>
+          <span style="display:flex;gap:10px;align-items:center"><span class="meter${r.due ? " over" : ""}" style="width:160px"><i style="width:${pct}%"></i></span><span class="mono">${r.ageDays.toFixed(0)} d</span>${r.due ? `<span class="badge b-bad">${r.daysOver.toFixed(0)} d over</span>` : `<span class="badge b-done">Within limit</span>`}</span></div>
+          <div class="btns">${r.due ? `<button class="btn small" data-act="archive" data-id="${esc(it.id)}" data-d="archived">Archive</button><button class="btn small" data-act="archive" data-id="${esc(it.id)}" data-d="donated">Donate</button>` : ""}</div></li>`;
+      }).join("")}</ul></div>` : `<div class="panel muted">No unclaimed items.</div>`}</section>`;
+  }
+
+  /* ---------- staff: audit ---------- */
+  function auditView() {
+    if (!isStaff()) return `<section class="head"><h1>Audit log</h1></section>${gateCard("Staff sign-in required", true)}`;
+    const rows = store.auditLog({ itemId: ui.auditItem.trim().toUpperCase(), action: ui.auditAction }).slice(0, 200);
+    const hist = ui.auditItem.trim() ? store.itemHistory(ui.auditItem.trim().toUpperCase()) : [];
+    const st = store.stats();
+    return `<section class="head"><h1>Audit log</h1><p class="muted">Every status change and staff action, in order. Entries are never edited. A rollback adds a new entry.</p></section>
+      <div class="filters"><div class="field"><label for="a-item">Item ID</label><input id="a-item" type="text" value="${esc(ui.auditItem)}" placeholder="I-0001" data-change="auditItem"></div>
+        <div class="field"><label for="a-act">Action</label><select id="a-act" data-set="auditAction">${options(Object.entries(ACTION_TEXT), ui.auditAction, "All actions")}</select></div></div>
+      ${hist.length ? `<div class="panel stack"><h3>State history for ${esc(ui.auditItem.toUpperCase())} <span class="muted">(top of stack first)</span></h3><div class="chips">${hist.map((h) => `<span class="badge b-wait">${esc(h.from ? FS.LABEL[h.from] + " → " : "")}${esc(FS.LABEL[h.to])}</span>`).join("")}</div></div>` : ""}
+      <div class="panel tight"><div class="tablewrap"><table><thead><tr><th class="num">#</th><th>Time</th><th>Who</th><th>Action</th><th>Item</th><th>Detail</th></tr></thead><tbody>
+        ${rows.map((e) => `<tr><td class="num">${e.seq}</td><td>${esc(fmtDT(e.at, true))}</td><td>${esc(e.actor)} <span class="muted">${esc(e.role)}</span></td><td>${esc(ACTION_TEXT[e.action] || e.action)}</td><td class="mono">${esc(e.itemId || "")}</td><td>${esc(e.detail)}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">No entries match.</td></tr>`}
+      </tbody></table></div></div>
+      <section class="sect"><header><h2>Under the hood</h2></header><dl class="hood">
+        <div><dt>Trie</dt><dd>${st.trieWords} words indexed for prefix search and auto-complete</dd></div>
+        <div><dt>Hash table with chaining</dt><dd>${st.hash.size} items in ${st.hash.buckets} buckets, longest chain ${st.hash.longestChain}</dd></div>
+        <div><dt>Max-heap</dt><dd>${store.retentionQueue(1e9).length} unclaimed items ranked by age</dd></div>
+        <div><dt>Stack</dt><dd>${store.undoStack.size} reversible changes, ${store.audit.length} log entries</dd></div>
+        <div><dt>Sorting and searching</dt><dd>Merge sort orders results. Binary search narrows date ranges. Edit distance checks claims and typos.</dd></div></dl></section>`;
+  }
+
+  /* ---------- modals ---------- */
+  function modalHTML() {
+    const m = ui.modal;
+    if (!m) return "";
+    const close = `<button class="btn small" data-act="closeModal" aria-label="Close">Close</button>`;
+    let inner = "", wide = "";
+    if (m.type === "signin" && REMOTE) {
+      const su = ui.authMode === "signup";
+      inner = `<header><h2>${su ? "Create your account" : "Sign in"}</h2>${close}</header>
+        <div class="tabs" role="tablist"><button role="tab" aria-selected="${!su}" data-act="tab" data-v="signin">Sign in</button><button role="tab" aria-selected="${su}" data-act="tab" data-v="signup">Create account</button></div>
+        ${m.note ? `<p class="muted">${esc(m.note)}</p>` : ""}
+        <form class="stack" data-form="signin" data-role="auth">
+          ${su ? `<div class="field"><label for="s-name">Full name</label><input id="s-name" name="name" type="text" autocomplete="name" required autofocus></div>
+            <div class="field"><label for="s-id">Student or employee ID</label><input id="s-id" name="studentId" type="text" autocomplete="off" placeholder="24-01234" required></div>` : ""}
+          <div class="field"><label for="s-email">Email</label><input id="s-email" name="email" type="email" autocomplete="email" required${su ? "" : " autofocus"}></div>
+          <div class="field"><label for="s-pw">Password</label><input id="s-pw" name="password" type="password" autocomplete="${su ? "new-password" : "current-password"}" minlength="6" required>${su ? `<span class="help">At least 6 characters.</span>` : ""}</div>
+          <div class="formerr" role="alert" hidden></div>
+          <button class="btn primary" type="submit"${ui.busy ? " disabled" : ""}>${su ? "Create account" : "Sign in"}</button></form>`;
+    } else if (m.type === "signin") {
+      const st = ui.loginTab === "staff";
+      inner = `<header><h2>Sign in</h2>${close}</header>
+        <div class="tabs" role="tablist"><button role="tab" aria-selected="${!st}" data-act="tab" data-v="student">Student / employee</button><button role="tab" aria-selected="${st}" data-act="tab" data-v="staff">Security staff</button></div>
+        ${m.note ? `<p class="muted">${esc(m.note)}</p>` : ""}
+        <form class="stack" data-form="signin" data-role="${st ? "staff" : "student"}">
+          <div class="field"><label for="s-name">Full name</label><input id="s-name" name="name" type="text" autocomplete="name" required autofocus></div>
+          ${st ? `<div class="field"><label for="s-pin">Staff PIN</label><input id="s-pin" name="pin" type="password" autocomplete="off" required><span class="help">Demo PIN: 2026</span></div>`
+               : `<div class="field"><label for="s-id">Student or employee ID</label><input id="s-id" name="studentId" type="text" autocomplete="off" placeholder="24-01234" required><span class="help">Demo: Jamie Cruz, 24-01234, has a match alert waiting.</span></div>`}
+          <div class="formerr" role="alert" hidden></div>
+          <button class="btn primary" type="submit">Sign in</button></form>`;
+    } else if (m.type === "claim") {
+      const it = store.getItem(m.id);
+      inner = `<header><div><h2>Claim ${esc(it.title)}</h2><p class="muted">${esc(it.id)} · found ${esc(fmtDT(it.foundAt))} · ${esc(it.gateName)}</p></div>${close}</header>
+        <form class="stack" data-form="claim"><input type="hidden" name="id" value="${esc(it.id)}">
+          <div class="field"><label for="c-det">What can you tell us that only the owner would know?</label><textarea id="c-det" name="details" maxlength="300" required autofocus placeholder="Marks, stickers, scratches, what is inside, lock screen photo"></textarea>
+          <span class="help">Security compares this with details kept private. Don't post these publicly. You have 3 tries.</span></div>
+          <div class="field"><label for="c-con">How should we reach you?</label><input id="c-con" name="contact" type="text" placeholder="Email or phone"></div>
+          <div class="formerr" role="alert" hidden></div>
+          <button class="btn primary" type="submit">Send claim</button></form>`;
+    } else if (m.type === "claimDone") {
+      inner = `<header><h2>Claim sent</h2>${close}</header><p>Security will review it. Bring a valid ID to the <b>${esc(m.gate)}</b> to collect <b>${esc(m.title)}</b>. You can follow the status under My activity.</p>
+        <div class="actions"><button class="btn primary" data-act="closeModal">Done</button></div>`;
+    } else if (m.type === "photo") {
+      const it = store.getItem(m.id, isStaff());
+      wide = " photo";
+      inner = `<header><div><h2>${esc(it.title)}</h2><p class="muted">${esc(it.id)} · ${esc(it.gateName)}</p></div>${close}</header>
+        <img src="${esc(it.photo)}" alt="Full size photo of ${esc(it.title)}">`;
+    } else if (m.type === "compare") {
+      const list = store.lookalikes(m.id);
+      wide = " wide";
+      inner = `<header><div><h2>Compare similar items</h2><p class="muted">Same description, different time and place. Pick the one you lost near.</p></div>${close}</header>
+        <div class="tablewrap"><table><thead><tr><th>Item</th><th>Found</th><th>Where</th><th>Notes</th><th></th></tr></thead><tbody>
+        ${list.map((x) => `<tr><td><b>${esc(x.title)}</b><br><span class="mono muted">${esc(x.id)}</span></td><td>${esc(fmtDT(x.foundAt))}<br><span class="muted">${ago(x.foundAt)}</span></td><td><span class="loc">${esc(x.gateName)}</span></td><td>${esc(x.description)}${x.tags.length ? `<br>${x.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join(" ")}` : ""}</td>
+          <td>${isStaff() ? "" : x.status === S.UNCLAIMED ? `<button class="btn primary small" data-act="openClaim" data-id="${esc(x.id)}">This one</button>` : `<span class="badge b-warn">Claim in progress</span>`}</td></tr>`).join("")}
+        </tbody></table></div>`;
+    }
+    return `<div class="scrim" data-act="scrim"><div class="modal${wide}" role="dialog" aria-modal="true">${inner}</div></div>`;
+  }
+
+  /* ---------- render ---------- */
+  const views = {
+    search: searchView, report: reportView, found: () => foundView(isStaff()), intake: () => (isStaff() ? foundView(true) : `<section class="head"><h1>Log an item</h1></section>${gateCard("Staff sign-in required", true)}`),
+    activity: activityView, desk: deskView, cleanup: cleanupView, audit: auditView, lab: labView,
+  };
+  function render() {
+    const app = $("#app");
+    if (!app) return;
+    if (!views[ui.view]) ui.view = "search";
+    app.innerHTML = `<header id="hdr">${headerHTML()}</header><main class="wrap" id="main">${views[ui.view]()}</main>
+      <footer class="foot wrap">${REMOTE ? `<span>Connected to Supabase. Data is shared and saved online.</span>` : `<span>Demo data is saved in this browser only.</span><button class="btn ghost small" data-act="resetDemo">${ui.confirmReset ? "Click again to erase and reload demo data" : "Reset demo data"}</button>`}</footer>${modalHTML()}`;
+    if (ui.modal) { const f = $(".modal [autofocus]"); if (f && f.focus) f.focus(); }
+  }
+  function go(view) {
+    ui.view = view; ui.modal = null; ui.confirmReset = false;
+    if (view === "report" && ui.reportResult && ui.reportResult.stale) ui.reportResult = null;
+    try { if (typeof location !== "undefined") location.hash = view; } catch (e) {}
+    render();
+    if (view === "activity" && me()) { store.markAlertsSeen(ui.token); renderHeader(); }
+    if (REMOTE) syncRemote(view);
+    if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
+  }
+  /* Remote mode: reload the read model when the visitor changes page, then redraw unless they are mid-form. */
+  function syncRemote(view) {
+    store.refresh().then(() => {
+      if (ui.view !== view || ui.modal || ["report", "found", "intake"].includes(view)) { renderHeader(); return; }
+      if (view === "search") { refreshSearch(); renderHeader(); } else render();
+    }, (e) => toast("Could not refresh: " + e.message, true));
+  }
+  const guard = (fn) => (...a) => {
+    const fail = (e) => toast((e && e.message) || String(e), true);
+    try { const r = fn(...a); return r && typeof r.then === "function" ? r.catch(fail) : r; } catch (e) { fail(e); }
+  };
+
+  /* ---------- actions (click) ---------- */
+  const actions = {
+    go: (el) => go(el.dataset.v),
+    labRetry: () => pyProbe(),
+    signin: (el) => { ui.loginTab = el.dataset.v === "staff" ? "staff" : "student"; ui.authMode = "signin"; ui.modal = { type: "signin" }; render(); },
+    tab: (el) => { if (REMOTE) ui.authMode = el.dataset.v === "signup" ? "signup" : "signin"; else ui.loginTab = el.dataset.v; ui.modal = { type: "signin", note: ui.modal && ui.modal.note }; render(); },
+    signout: guard(async () => { await store.logout(ui.token); ui.token = null; lsSet("findr.session", null); ui.reportResult = null; ui.foundResult = null; go(["search", "report", "found"].includes(ui.view) ? ui.view : "search"); toast("Signed out."); }),
+    closeModal: () => { ui.modal = null; render(); },
+    scrim: (el, ev) => { if (ev.target === el) { ui.modal = null; render(); } },
+    openClaim: (el) => {
+      if (!me()) { ui.loginTab = "student"; ui.authMode = "signin"; ui.modal = { type: "signin", note: "Sign in to claim this item." }; return render(); }
+      ui.modal = { type: "claim", id: el.dataset.id }; render();
+    },
+    zoomPhoto: (el) => { ui.modal = { type: "photo", id: el.dataset.id }; render(); },
+    compare: (el) => { ui.modal = { type: "compare", id: el.dataset.id }; render(); },
+    share: (el) => {
+      const it = store.getItem(el.dataset.id);
+      const text = `FOUND: ${it.title}. Held by security (${it.gateName}), found ${fmtDT(it.foundAt)}. Search FINDr and quote ${it.id} to claim it.`;
+      const done = () => toast("Post text copied. Paste it into the community page.");
+      try { navigator.clipboard.writeText(text).then(done, () => toast(text)); } catch (e) { toast(text); }
+    },
+    pickSuggest: (el) => { ui.q = el.dataset.v + " "; ui.suggest = []; ui.sugIdx = -1; const q = $("#q"); if (q) { q.value = ui.q; q.focus(); } refreshSearch(); },
+    pickCat: (el) => { ui.cat = el.dataset.v; refreshSearch(); },
+    pickAgain: (el) => { ui.q = el.dataset.v; const q = $("#q"); if (q) q.value = ui.q; updateSuggest(); refreshSearch(); },
+    clearFilters: () => { ui.q = ""; ui.cat = ""; ui.gate = ""; ui.since = ""; ui.sort = "relevance"; ui.suggest = []; render(); },
+    reportAgain: () => { ui.reportResult = null; render(); },
+    foundAgain: () => { ui.foundResult = null; ui.photo = null; render(); },
+    closeReport: guard(async (el) => { await store.closeReport(ui.token, el.dataset.id); toast("Report closed."); render(); }),
+    receive: guard(async (el) => {
+      const sec = $("#sec-" + el.dataset.id);
+      const r = await store.receiveItem(ui.token, el.dataset.id, sec ? sec.value : "");
+      toast(`${r.item.title} confirmed${r.alerts ? ` · ${r.alerts} owner alert${r.alerts === 1 ? "" : "s"} sent` : ""}`); render();
+    }),
+    rejectPending: guard(async (el) => { await store.rejectPending(ui.token, el.dataset.id, "spam / never dropped off"); toast("Submission rejected."); render(); }),
+    approve: guard(async (el) => { const it = await store.approveClaim(ui.token, el.dataset.id); toast(`${it.title} released.`); render(); }),
+    rejectClaim: guard(async (el) => { await store.rejectClaim(ui.token, el.dataset.id); toast("Claim rejected. The item is unclaimed again."); render(); }),
+    undo: guard(async () => { const it = await store.undo(ui.token); toast(`Reverted ${it.title} to ${FS.LABEL[it.status]}.`); render(); }),
+    archive: guard(async (el) => { const it = await store.archiveItem(ui.token, el.dataset.id, el.dataset.d); toast(`${it.title} ${it.disposition}.`); render(); }),
+    processOldest: guard(async (el) => { const it = await store.processOldest(ui.token, el.dataset.d); toast(`${it.title} ${it.disposition}.`); render(); }),
+    resetDemo: () => {
+      if (REMOTE) return;
+      if (!ui.confirmReset) { ui.confirmReset = true; return render(); }
+      store.clearAll(); store.seedDemo(); ui.token = null; lsSet("findr.session", null);
+      Object.assign(ui, { q: "", cat: "", gate: "", since: "", suggest: [], reportResult: null, foundResult: null, confirmReset: false, modal: null });
+      go("search"); toast("Demo data reset.");
+    },
+  };
+
+  /* ---------- forms (submit) ---------- */
+  const readForm = (f) => f.__values || Object.fromEntries(new FormData(f));
+  const forms = {
+    async labTrace(f) {
+      const v = readForm(f), L = ui.lab;
+      L.n = v.n; L.target = v.target; L.err = ""; L.busy = "trace"; render();
+      try { L.trace = await pyGet(`/api/lab/trace?n=${encodeURIComponent(v.n)}&target=${encodeURIComponent(v.target)}`); }
+      catch (e) { L.err = e.message; }
+      L.busy = ""; render();
+    },
+    async labBench(f) {
+      const v = readForm(f), L = ui.lab;
+      L.sizes = v.sizes; L.err = ""; L.busy = "bench"; render();
+      try { L.bench = await pyGet("/api/lab/benchmark?sizes=" + encodeURIComponent(v.sizes)); }
+      catch (e) { L.err = e.message; }
+      L.busy = ""; render();
+    },
+    async signin(f) {
+      const v = readForm(f);
+      if (REMOTE) {
+        if (ui.busy) return;
+        ui.busy = true;
+        try {
+          let p;
+          if (ui.authMode === "signup") {
+            const r = await store.signUp({ email: v.email, password: v.password, name: v.name, studentId: v.studentId });
+            if (r.needsConfirmation) { ui.busy = false; return formErr(f, "Account created. Check your email to confirm it, then sign in."); }
+            p = r.profile;
+          } else p = await store.signIn({ email: v.email, password: v.password });
+          ui.token = p.token; ui.modal = null;
+          go(p.role === "staff" ? "desk" : ui.view);
+          toast(`Signed in as ${p.name}.`);
+        } catch (e) { formErr(f, e.message); } finally { ui.busy = false; }
+        return;
+      }
+      try {
+        const s = store.login(f.dataset.role, { name: v.name, studentId: v.studentId, pin: v.pin });
+        ui.token = s.token; lsSet("findr.session", s.token); ui.modal = null;
+        go(s.role === "staff" ? "desk" : ui.view);
+        toast(`Signed in as ${s.name}.`);
+      } catch (e) { formErr(f, e.message); }
+    },
+    async claim(f) {
+      const v = readForm(f);
+      try {
+        const r = await store.submitClaim(ui.token, v.id, v.details, v.contact);
+        if (!r.ok) return formErr(f, `${r.message} (${r.attemptsLeft} ${r.attemptsLeft === 1 ? "try" : "tries"} left)`);
+        const it = store.getItem(v.id);
+        ui.modal = { type: "claimDone", title: it.title, gate: it.gateName }; render(); renderHeader();
+        if (ui.view === "search") refreshSearch();
+      } catch (e) { formErr(f, e.message); }
+    },
+    async report(f) {
+      const v = readForm(f);
+      try {
+        ui.reportResult = await store.createReport(ui.token, { title: v.title, category: v.category, gate: v.gate, lostAt: parseLocal(v.lostAt), tags: v.tags, description: v.description, contact: v.contact });
+        render(); renderHeader(); window.scrollTo && window.scrollTo(0, 0);
+      } catch (e) { formErr(f, e.message); }
+    },
+    async found(f) {
+      const v = readForm(f), staff = f.dataset.staff === "1";
+      try {
+        ui.foundResult = await store.createFoundItem(ui.token, { title: v.title, category: v.category, gate: v.gate, foundAt: parseLocal(v.foundAt), tags: v.tags, description: v.description, secret: v.secret, photo: ui.photo, website: v.website });
+        ui.photo = null;
+        if (store.storageError) toast("Saved, but browser storage is full. Photos may not persist.", true);
+        if (store.notice) { toast(store.notice, true); store.notice = null; }
+        render(); renderHeader(); window.scrollTo && window.scrollTo(0, 0);
+      } catch (e) { formErr(f, e.message); }
+    },
+    async receiveCode(f) {
+      const v = readForm(f);
+      try {
+        const r = await store.receiveItem(ui.token, v.code);
+        toast(`${r.item.title} confirmed${r.alerts ? ` · ${r.alerts} owner alert${r.alerts === 1 ? "" : "s"} sent` : ""}`); render();
+      } catch (e) { toast(e.message, true); }
+    },
+  };
+
+  /* ---------- photo ---------- */
+  function readPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const s = Math.min(1, (REMOTE ? 1280 : 560) / Math.max(img.width, img.height));
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL("image/jpeg", REMOTE ? 0.82 : 0.7));
+        };
+        img.onerror = reject; img.src = fr.result;
+      };
+      fr.onerror = reject; fr.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- wiring ---------- */
+  function wire() {
+    document.addEventListener("click", (e) => {
+      const el = e.target.closest && e.target.closest("[data-act]");
+      if (!el) { if (ui.suggest.length && !(e.target.closest && e.target.closest(".searchbox"))) { ui.suggest = []; refreshSearch(); } return; }
+      if (el.dataset.act === "scrim" && e.target !== el) return; // clicks inside the modal (e.g. its submit button) must not be cancelled by the backdrop handler
+      const fn = actions[el.dataset.act];
+      if (fn) { if (el.tagName !== "INPUT") e.preventDefault(); fn(el, e); }
+    });
+    document.addEventListener("submit", (e) => {
+      const f = e.target.closest && e.target.closest("form[data-form]");
+      if (!f) return;
+      e.preventDefault();
+      forms[f.dataset.form](f);
+    });
+    document.addEventListener("input", (e) => {
+      const t = e.target;
+      if (t.id === "q") { ui.q = t.value; updateSuggest(); refreshSearch(); }
+      else if (t.id === "ret") { const l = $("#retv"); if (l) l.textContent = t.value + " days"; }
+    });
+    document.addEventListener("change", (e) => {
+      const t = e.target;
+      if (t.dataset && t.dataset.set) { ui[t.dataset.set] = t.value; if (ui.view === "search") refreshSearch(); else render(); }
+      else if (t.dataset && t.dataset.change === "retention") guard(() => { store.setRetention(ui.token, t.value); render(); })();
+      else if (t.dataset && t.dataset.change === "auditItem") { ui.auditItem = t.value; render(); }
+      else if (t.id === "photo" && t.files && t.files[0]) {
+        readPhoto(t.files[0]).then((d) => { ui.photo = d; const p = $("#photoPrev"); if (p) p.innerHTML = `<img src="${d}" alt="Photo preview" style="max-width:160px;border-radius:8px;border:1px solid var(--line)">`; }, () => toast("That photo could not be read. Try another.", true));
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { if (ui.modal) { ui.modal = null; render(); } else if (ui.suggest.length) { ui.suggest = []; refreshSearch(); } return; }
+      if (e.target && e.target.id === "q" && ui.suggest.length) {
+        if (e.key === "ArrowDown") { e.preventDefault(); ui.sugIdx = (ui.sugIdx + 1) % ui.suggest.length; refreshSearch(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); ui.sugIdx = (ui.sugIdx - 1 + ui.suggest.length) % ui.suggest.length; refreshSearch(); }
+        else if (e.key === "Enter" && ui.sugIdx >= 0) { e.preventDefault(); actions.pickSuggest({ dataset: { v: ui.suggest[ui.sugIdx] } }); }
+      }
+    });
+    window.addEventListener("hashchange", () => {
+      const v = (location.hash || "").replace("#", "");
+      if (VIEWS.includes(v) && v !== ui.view) { ui.view = v; ui.modal = null; render(); }
+    });
+  }
+
+  globalThis.__findr = { store, ui, actions, forms, views, render, go, runSearch, remote: REMOTE };
+  if (typeof document !== "undefined" && document.addEventListener) {
+    const start = (typeof location !== "undefined" ? (location.hash || "").replace("#", "") : "");
+    if (VIEWS.includes(start)) ui.view = start;
+    wire();
+    pyProbe();
+    if (REMOTE) {
+      const app = $("#app");
+      if (app) app.innerHTML = `<main class="wrap"><section class="head"><h1>FINDr</h1><p class="muted">Connecting…</p></section></main>`;
+      store.init().then(() => { if (store.profile) ui.token = store.profile.token; }, (e) => { ui.loadError = e.message; })
+        .then(() => { render(); if (ui.loadError) toast("Could not reach the server: " + ui.loadError, true); });
+    } else {
+      store.sweepRetention();
+      render();
+    }
+  }
+})();
+</script></body></html>

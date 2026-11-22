@@ -1,0 +1,11 @@
+{
+  "buildCommand": "node build.js",
+  "outputDirectory": "dist",
+  "installCommand": "npm install --omit=dev",
+  "functions": {
+    "api/index.py": { "includeFiles": "backend/**" }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" }
+  ]
+}

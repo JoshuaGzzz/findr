@@ -1,0 +1,159 @@
+[
+ {
+  "id": 1,
+  "title": "Blue Hydro Flask tumbler",
+  "category": "bottles",
+  "gate": "g-gym",
+  "tags": [
+   "blue",
+   "steel",
+   "32oz"
+  ],
+  "description": "Insulated tumbler found at the bleachers.",
+  "age_hours": 120,
+  "status": "unclaimed"
+ },
+ {
+  "id": 2,
+  "title": "Black umbrella",
+  "category": "umbrellas",
+  "gate": "g-lib",
+  "tags": [
+   "black",
+   "folding"
+  ],
+  "description": "Compact folding umbrella left on a reading table.",
+  "age_hours": 72,
+  "status": "unclaimed"
+ },
+ {
+  "id": 3,
+  "title": "Black umbrella",
+  "category": "umbrellas",
+  "gate": "g-eng",
+  "tags": [
+   "black",
+   "long"
+  ],
+  "description": "Long umbrella found beside the lockers.",
+  "age_hours": 25,
+  "status": "unclaimed"
+ },
+ {
+  "id": 4,
+  "title": "Black wallet",
+  "category": "wallets",
+  "gate": "g-main",
+  "tags": [
+   "black",
+   "leather"
+  ],
+  "description": "Bifold wallet handed in by a student.",
+  "age_hours": 50,
+  "status": "unclaimed"
+ },
+ {
+  "id": 5,
+  "title": "iPhone 13",
+  "category": "electronics",
+  "gate": "g-lib",
+  "tags": [
+   "midnight",
+   "cracked protector"
+  ],
+  "description": "Phone found on a charging bench, screen locked.",
+  "age_hours": 6,
+  "status": "unclaimed"
+ },
+ {
+  "id": 6,
+  "title": "Grey backpack",
+  "category": "bags",
+  "gate": "g-eng",
+  "tags": [
+   "grey",
+   "nike"
+  ],
+  "description": "Backpack left in the engineering lobby.",
+  "age_hours": 288,
+  "status": "unclaimed"
+ },
+ {
+  "id": 7,
+  "title": "Casio fx-991 calculator",
+  "category": "stationery",
+  "gate": "g-lib",
+  "tags": [
+   "scientific",
+   "black"
+  ],
+  "description": "Scientific calculator found in a study room.",
+  "age_hours": 840,
+  "status": "unclaimed"
+ },
+ {
+  "id": 8,
+  "title": "Black-framed eyeglasses",
+  "category": "accessories",
+  "gate": "g-main",
+  "tags": [
+   "glasses",
+   "black frame"
+  ],
+  "description": "Eyeglasses in a soft case.",
+  "age_hours": 984,
+  "status": "unclaimed"
+ },
+ {
+  "id": 9,
+  "title": "House keys with red lanyard",
+  "category": "keys",
+  "gate": "g-gym",
+  "tags": [
+   "red",
+   "lanyard"
+  ],
+  "description": "Three keys on a red lanyard.",
+  "age_hours": 1248,
+  "status": "unclaimed"
+ },
+ {
+  "id": 10,
+  "title": "Student ID card",
+  "category": "ids",
+  "gate": "g-main",
+  "tags": [
+   "id",
+   "card"
+  ],
+  "description": "Student ID card, name withheld for privacy.",
+  "age_hours": 18,
+  "status": "unclaimed"
+ },
+ {
+  "id": 11,
+  "title": "AirPods case",
+  "category": "electronics",
+  "gate": "g-lib",
+  "tags": [
+   "white",
+   "earbuds"
+  ],
+  "description": "White earbuds charging case.",
+  "age_hours": 96,
+  "status": "unclaimed"
+ },
+ {
+  "id": 12,
+  "title": "Maroon hoodie",
+  "category": "clothing",
+  "gate": "g-gym",
+  "tags": [
+   "maroon",
+   "hoodie"
+  ],
+  "description": "Pullover hoodie, size M.",
+  "age_hours": 192,
+  "status": "unclaimed"
+ }
+]
